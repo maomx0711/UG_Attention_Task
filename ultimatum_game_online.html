@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>最后通牒任务实验</title>
+    <!-- 使用CDN加载jsPsych -->
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #7F7F7F;
+            cursor: default;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body.hide-cursor {
+            cursor: none;
+        }
+        
+        .experiment-container {
+            width: 1920px;
+            height: 1080px;
+            margin: 0 auto;
+            position: relative;
+            background-color: #7F7F7F;
+        }
+        
+        .choice-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 100vh;
+            font-size: 36px;
+            color: white;
+        }
+        
+        .choice-left {
+            position: absolute;
+            left: 25%;
+            top: 70%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .choice-right {
+            position: absolute;
+            right: 25%;
+            top: 70%;
+            transform: translate(50%, -50%);
+        }
+        
+        .number-display {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .feedback-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .money-bar {
+            position: absolute;
+            height: 30px;
+            background-color: #FFFF00;
+        }
+        
+        .money-bar-bg {
+            position: absolute;
+            height: 30px;
+            width: 400px;
+            background-color: #969696;
+        }
+        
+        .feedback-text {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .allocation-display {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .rating-scale {
+            position: absolute;
+            width: 550px;
+            height: 26px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .rating-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, #FF0000, #FFFF00, #00FF00);
+            position: relative;
+        }
+        
+        .rating-slider {
+            position: absolute;
+            width: 10px;
+            height: 100%;
+            background-color: #000;
+            cursor: pointer;
+        }
+        
+        .dots-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .dot {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body></body>
+<script>
+    // 实验参数
+    const TRIAL_N = 125;
+    const BOTH_NUM = 90;
+    const SUB_NUM = 10;
+    const OTH_NUM = 10;
+    const WRONG_NUM = 15;
+    const GAP_POINTS = 9;
+    const RECEPTION = 10;
+    const REST_TRIAL = 65;
+    const HAPPEN_NUM = 32;
+    
+    // 位置参数
+    const POSITIONS = {
+        left_x: 1920/2 - 300,
+        left_y: 1080/2 + 300,
+        right_x: 1920/2 + 300,
+        right_y: 1080/2 + 300,
+        left_up_x: 1920/2 - 280,
+        left_up_y: 1080/2 - 150,
+        left_down_x: 1920/2 - 275,
+        left_down_y: 1080/2 + 50,
+        right_up_x: 1920/2 + 275,
+        right_up_y: 1080/2 - 150,
+        right_down_x: 1920/2 + 275,
+        right_down_y: 1080/2 + 50,
+        rect_he_x: 1920/2 - 140,
+        rect_he_y: 1080/2 - 162,  // 调整：原来是-175，向下移动13像素使其与文字垂直居中
+        rect_you_x: 1920/2 - 140,
+        rect_you_y: 1080/2 + 38,  // 调整：原来是+25，向下移动13像素使其与文字垂直居中
+        rect_give_x: 1920/2 - 140,
+        rect_give_y: 1080/2 + 250
+    };
+    
+    // 文本常量
+    const TEXTS = {
+        less: '更少',
+        more: '更多',
+        wait: '等待双方回答',
+        correct_you: '你：正确',
+        wrong_you: '你：错误',
+        correct_ta: 'TA：正确',
+        wrong_ta: 'TA：错误',
+        respond: '接受或者拒绝',
+        accept_key: '接受当前方案则按 N',
+        reject_key: '拒绝则按 M',
+        self_allocate: '自己分配',
+        yuan: '元',
+        give: '增加金额：',
+        punish: '减少金额：',
+        rating: '公平评分'
+    };
+    
+    // 存储实验数据
+    let experimentData = {
+        subjectID: '',
+        runNum: 1,
+        allResults: []
+    };
+    
+    // 折扣率和金额设置
+    const MONEY_SET = [35, 40];
+    let discountRates = [];
+    let discountTypes = [];
+    for (let i = 0; i < RECEPTION; i++) {
+        for (let rate = 0.5; rate >= 0.1; rate -= 0.05) {
+            discountRates.push(rate);
+        }
+        for (let type = 9; type >= 1; type--) {
+            discountTypes.push(type);
+        }
+    }
+    
+    // 初始化jsPsych
+    const jsPsych = initJsPsych({
+        on_finish: function() {
+            displayResults();
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+            document.body.classList.remove('hide-cursor');
+        }
+    });
+    
+    let timeline = [];
+    
+    // 全屏提示
+    const enterFullscreen = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:24px; line-height:2; color:white;">
+            <p style="font-size:32px; font-weight:bold;">最后通牒任务</p>
+            <p style="margin-top:40px;">实验需要在全屏模式下进行</p>
+            <p style="margin-top:30px; color:#FF5722;">
+                按<strong>空格键</strong>进入全屏并开始实验
+            </p>
+        </div>
+        `,
+        choices: [' '],
+        on_finish: function() {
+            document.documentElement.requestFullscreen();
+            document.body.classList.add('hide-cursor');
+        }
+    };
+    timeline.push(enterFullscreen);
+    
+    // 被试信息收集
+    const subjectInfo = {
+        type: jsPsychSurveyText,
+        questions: [
+            {prompt: '请输入被试编号:', name: 'subjectID', required: true},
+            {prompt: '请输入Run编号:', name: 'runNum', required: true}
+        ],
+        on_finish: function(data) {
+            experimentData.subjectID = data.response.subjectID;
+            experimentData.runNum = parseInt(data.response.runNum);
+        }
+    };
+    timeline.push(subjectInfo);
+    
+    // 指导语 - 修改后包含按键说明
+    const instructions = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:20px; line-height:2.5; color:white; max-width:900px; margin:0 auto;">
+            <p style="font-size:28px; font-weight:bold; color:#FFD700;">实验指导语</p>
+            
+            <p style="margin-top:30px; text-align:left;">
+                在本实验中，您将与另一位参与者(TA)一起完成一系列任务。
+            </p>
+            
+            <p style="text-align:left; margin-top:20px;">
+                <strong style="color:#4CAF50;">第一阶段：数量判断任务</strong><br>
+                屏幕上会先出现一些圆点，然后出现一个数字(19、20或21)。<br>
+                您需要比较<strong>圆点的数量</strong>和<strong>屏幕中的数字</strong>：<br>
+                • 按 <span style="color:#FFD700;">N键</span> - 如果圆点数量<strong>少于</strong>数字<br>
+                • 按 <span style="color:#FFD700;">M键</span> - 如果圆点数量<strong>多于</strong>数字
+            </p>
+            
+            <p style="text-align:left; margin-top:20px;">
+                <strong style="color:#4CAF50;">第二阶段：方案接受/拒绝</strong><br>
+                根据您和TA的回答正确性，会出现金额分配方案。您需要决定：<br>
+                • 按 <span style="color:#FFD700;">N键</span> - <strong>接受</strong>当前方案<br>
+                • 按 <span style="color:#FFD700;">M键</span> - <strong>拒绝</strong>当前方案<br>
+                <br>
+                <span style="color:#FF5722;">注意：如果拒绝方案，双方金额都将变为0元</span>
+            </p>
+            
+            <p style="text-align:left; margin-top:20px;">
+                <strong style="color:#4CAF50;">第三阶段：公平评分</strong><br>
+                实验最后会请您对不同分配方案的公平性进行评分。
+            </p>
+            
+            <p style="margin-top:40px; font-size:18px; color:#FFD700;">
+                按<strong>空格键</strong>开始练习试次
+            </p>
+        </div>
+        `,
+        choices: [' ']
+    };
+    timeline.push(instructions);
+    
+    // 生成注视点
+    function generateFixation() {
+        return `
+        <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+            <div style="position: absolute; 
+                        left: 50%; 
+                        top: 50%; 
+                        transform: translate(-50%, -50%);
+                        width: 20px; 
+                        height: 20px;">
+                <div style="position: absolute; 
+                            left: 50%; 
+                            top: 0; 
+                            transform: translateX(-50%);
+                            width: 2px; 
+                            height: 20px; 
+                            background-color: white;"></div>
+                <div style="position: absolute; 
+                            left: 0; 
+                            top: 50%; 
+                            transform: translateY(-50%);
+                            width: 20px; 
+                            height: 2px; 
+                            background-color: white;"></div>
+            </div>
+        </div>
+        `;
+    }
+    
+    // 生成随机圆点刺激 - 在中央区域
+    function generateDots() {
+        const numDots = 20;
+        const dots = [];
+        const dotSize = 8; // 固定圆点大小为8像素
+        // 圆点出现在屏幕中央区域 (40%-65%的宽度和高度范围)
+        for (let i = 0; i < numDots; i++) {
+            const x = Math.random() * 25 + 40; // 40%-65%
+            const y = Math.random() * 25 + 40; // 40%-65%
+            dots.push(`<div class="dot" style="left:${x}%; top:${y}%; width:${dotSize}px; height:${dotSize}px;"></div>`);
+        }
+        return `
+        <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+            ${dots.join('')}
+        </div>`;
+    }
+    
+    // 创建试次条件
+    const conditions = [];
+    for (let i = 0; i < BOTH_NUM; i++) conditions.push({type: 1, name: 'both_correct'});
+    for (let i = 0; i < SUB_NUM; i++) conditions.push({type: 2, name: 'sub_correct'});
+    for (let i = 0; i < OTH_NUM; i++) conditions.push({type: 3, name: 'oth_correct'});
+    for (let i = 0; i < WRONG_NUM; i++) conditions.push({type: 4, name: 'both_wrong'});
+    
+    // 随机打乱试次
+    const shuffledConditions = shuffleArray(conditions);
+    
+    // 主实验试次
+    shuffledConditions.forEach((condition, trialIndex) => {
+        const trialNum = trialIndex + 1;
+        
+        // 注视点
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: generateFixation(),
+            choices: "NO_KEYS",
+            trial_duration: 500 + Math.random() * 1000
+        });
+        
+        // 圆点刺激
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: generateDots(),
+            choices: "NO_KEYS",
+            trial_duration: 1500
+        });
+        
+        // 数字判断任务
+        const numbers = ['19', '20', '21'];
+        const presentNumber = numbers[trialIndex % 3];
+        
+        const numberJudgment = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                return `
+                <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                    <div style="position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); 
+                                font-size: 64px; color: white; font-weight: bold;">
+                        ${presentNumber}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.left_x}px; top: ${POSITIONS.left_y}px; 
+                                font-size: 36px; color: white;">
+                        ${TEXTS.less}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_x}px; top: ${POSITIONS.right_y}px; 
+                                font-size: 36px; color: white;">
+                        ${TEXTS.more}
+                    </div>
+                </div>
+                `;
+            },
+            choices: ['n', 'm'],
+            data: {
+                trial_type: 'number_judgment',
+                trial_number: trialNum,
+                condition_type: condition.type,
+                present_number: presentNumber
+            },
+            on_finish: function(data) {
+                data.response_code = data.response === 'n' ? 1 : 2;
+            }
+        };
+        timeline.push(numberJudgment);
+        
+        // 选择反馈 (0.5秒显示被试的选择)
+        const choiceFeedback = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                const lastResponse = jsPsych.data.get().last(1).values()[0].response;
+                const selectedText = lastResponse === 'n' ? TEXTS.less : TEXTS.more;
+                const posX = lastResponse === 'n' ? POSITIONS.left_x : POSITIONS.right_x;
+                const posY = lastResponse === 'n' ? POSITIONS.left_y : POSITIONS.right_y;
+                
+                return `
+                <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                    <div style="position: absolute; left: ${posX}px; top: ${posY}px; 
+                                font-size: 36px; color: white;">
+                        ${selectedText}
+                    </div>
+                </div>
+                `;
+            },
+            choices: "NO_KEYS",
+            trial_duration: 500
+        };
+        timeline.push(choiceFeedback);
+        
+        // 等待提示
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+            <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); 
+                            font-size: 32px; color: white;">
+                    ${TEXTS.wait}
+                </div>
+            </div>
+            `,
+            choices: "NO_KEYS",
+            trial_duration: 1500
+        });
+        
+        // 分配方案展示和决策 - 添加了按键说明
+        const totalMoney = MONEY_SET[Math.floor(Math.random() * MONEY_SET.length)];
+        let discount, feedUp, feedDown, moneyYou, moneyHe;
+        
+        if (condition.type === 1) { // 双方正确
+            const discountIndex = Math.floor(Math.random() * discountRates.length);
+            discount = discountRates[discountIndex];
+            feedUp = TEXTS.correct_ta;
+            feedDown = TEXTS.correct_you;
+            moneyYou = totalMoney * discount;
+            moneyHe = totalMoney * (1 - discount);
+        } else if (condition.type === 2) { // 仅被试正确
+            discount = 1.0;
+            feedUp = TEXTS.wrong_ta;
+            feedDown = TEXTS.correct_you;
+            moneyYou = totalMoney;
+            moneyHe = 0;
+        } else if (condition.type === 3) { // 仅对方正确
+            discount = 0.0;
+            feedUp = TEXTS.correct_ta;
+            feedDown = TEXTS.wrong_you;
+            moneyYou = 0;
+            moneyHe = totalMoney;
+        } else { // 双方错误
+            discount = -1;
+            feedUp = TEXTS.wrong_ta;
+            feedDown = TEXTS.wrong_you;
+            moneyYou = 0;
+            moneyHe = 0;
+        }
+        
+        const heBarWidth = condition.type !== 4 ? 400 * (1 - (discount < 0 ? 0 : discount)) : 0;
+        const youBarWidth = condition.type !== 4 ? 400 * (discount < 0 ? 0 : discount) : 0;
+        
+        const allocationDecision = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                return `
+                <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                    <!-- TA的结果和金额 -->
+                    <div style="position: absolute; left: ${POSITIONS.left_up_x}px; top: ${POSITIONS.left_up_y}px; color: white; font-size: 24px;">
+                        ${feedUp}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_up_x}px; top: ${POSITIONS.right_up_y}px; color: white; font-size: 24px;">
+                        ${moneyHe.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                    <div class="money-bar-bg" style="left: ${POSITIONS.rect_he_x}px; top: ${POSITIONS.rect_he_y}px;"></div>
+                    <div class="money-bar" style="left: ${POSITIONS.rect_he_x}px; top: ${POSITIONS.rect_he_y}px; width: ${heBarWidth}px;"></div>
+                    
+                    <!-- 你的结果和金额 -->
+                    <div style="position: absolute; left: ${POSITIONS.left_down_x}px; top: ${POSITIONS.left_down_y}px; color: white; font-size: 24px;">
+                        ${feedDown}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_down_x}px; top: ${POSITIONS.right_down_y}px; color: white; font-size: 24px;">
+                        ${moneyYou.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                    <div class="money-bar-bg" style="left: ${POSITIONS.rect_you_x}px; top: ${POSITIONS.rect_you_y}px;"></div>
+                    <div class="money-bar" style="left: ${POSITIONS.rect_you_x}px; top: ${POSITIONS.rect_you_y}px; width: ${youBarWidth}px;"></div>
+                </div>
+                `;
+            },
+            choices: ['n', 'm'],
+            data: {
+                trial_type: 'allocation_decision',
+                trial_number: trialNum,
+                condition_type: condition.type,
+                discount: discount,
+                total_money: totalMoney,
+                money_you: moneyYou,
+                money_he: moneyHe
+            },
+            on_finish: function(data) {
+                data.decision = data.response === 'n' ? 'accept' : 'reject';
+            }
+        };
+        timeline.push(allocationDecision);
+        
+        // 反馈阶段 - 修复后显示正确的反馈
+        const feedbackTrial = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                const lastDecision = jsPsych.data.get().last(1).values()[0];
+                const decision = lastDecision.decision;
+                
+                let finalMoneyYou, finalMoneyHe, textColor;
+                
+                if (decision === 'accept') {
+                    // 接受方案：保持金额不变，不显示矩形
+                    finalMoneyYou = moneyYou;
+                    finalMoneyHe = moneyHe;
+                    textColor = 'white';
+                } else {
+                    // 拒绝方案：金额变为0，文字显示红色，不显示矩形
+                    finalMoneyYou = 0;
+                    finalMoneyHe = 0;
+                    textColor = '#FF0000';
+                }
+                
+                return `
+                <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                    <!-- TA的结果和金额 -->
+                    <div style="position: absolute; left: ${POSITIONS.left_up_x}px; top: ${POSITIONS.left_up_y}px; color: white; font-size: 24px;">
+                        ${feedUp}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_up_x}px; top: ${POSITIONS.right_up_y}px; color: ${textColor}; font-size: 24px;">
+                        ${finalMoneyHe.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                    
+                    <!-- 你的结果和金额 -->
+                    <div style="position: absolute; left: ${POSITIONS.left_down_x}px; top: ${POSITIONS.left_down_y}px; color: white; font-size: 24px;">
+                        ${feedDown}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_down_x}px; top: ${POSITIONS.right_down_y}px; color: ${textColor}; font-size: 24px;">
+                        ${finalMoneyYou.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                </div>
+                `;
+            },
+            choices: "NO_KEYS",
+            trial_duration: 2000,
+            data: {
+                trial_type: 'feedback',
+                trial_number: trialNum
+            }
+        };
+        timeline.push(feedbackTrial);
+        
+        // ITI (试次间隔)
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="background-color: #7F7F7F; width: 100vw; height: 100vh;"></div>',
+            choices: "NO_KEYS",
+            trial_duration: 1000
+        });
+        
+        // 休息
+        if (trialNum % REST_TRIAL === 0 && trialNum !== TRIAL_N) {
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                <div style="text-align:center; font-size:24px; color:white; line-height:2;">
+                    <p style="font-size:28px; color:#FFD700;">请休息一下</p>
+                    <p style="margin-top:30px;">您已完成 ${trialNum}/${TRIAL_N} 个试次</p>
+                    <p style="margin-top:20px;">准备好后，按<strong>空格键</strong>继续</p>
+                </div>
+                `,
+                choices: [' ']
+            });
+        }
+    });
+    
+    // 创建评分试次
+    function createRatingTrial(ratingNum, discount, totalMoney) {
+        let feedUp, feedDown, moneyYou, moneyHe;
+        
+        if (discount >= 0 && discount < 1) {
+            feedUp = TEXTS.correct_ta;
+            feedDown = TEXTS.correct_you;
+            moneyYou = totalMoney * discount;
+            moneyHe = totalMoney * (1 - discount);
+        } else if (discount === 1.0) {
+            feedUp = TEXTS.wrong_ta;
+            feedDown = TEXTS.correct_you;
+            moneyYou = totalMoney;
+            moneyHe = 0;
+        } else if (discount === 0.0) {
+            feedUp = TEXTS.correct_ta;
+            feedDown = TEXTS.wrong_you;
+            moneyYou = 0;
+            moneyHe = totalMoney;
+        } else {
+            feedUp = TEXTS.wrong_ta;
+            feedDown = TEXTS.wrong_you;
+            moneyYou = 0;
+            moneyHe = 0;
+        }
+        
+        const heBarWidth = discount >= 0 && discount <= 1 ? 400 * (1 - discount) : 0;
+        const youBarWidth = discount >= 0 && discount <= 1 ? 400 * discount : 0;
+        
+        return {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                return `
+                <div style="position: relative; width: 100vw; height: 100vh; background-color: #7F7F7F;">
+                    <div style="position: absolute; left: ${POSITIONS.left_up_x}px; top: ${POSITIONS.left_up_y}px;">
+                        ${feedUp}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_up_x}px; top: ${POSITIONS.right_up_y}px;">
+                        ${moneyHe.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                    <div class="money-bar-bg" style="left: ${POSITIONS.rect_he_x}px; top: ${POSITIONS.rect_he_y}px;"></div>
+                    <div class="money-bar" style="left: ${POSITIONS.rect_he_x}px; top: ${POSITIONS.rect_he_y}px; width: ${heBarWidth}px;"></div>
+                    
+                    <div style="position: absolute; left: ${POSITIONS.left_down_x}px; top: ${POSITIONS.left_down_y}px;">
+                        ${feedDown}
+                    </div>
+                    <div style="position: absolute; left: ${POSITIONS.right_down_x}px; top: ${POSITIONS.right_down_y}px;">
+                        ${moneyYou.toFixed(1)}${TEXTS.yuan}
+                    </div>
+                    <div class="money-bar-bg" style="left: ${POSITIONS.rect_you_x}px; top: ${POSITIONS.rect_you_y}px;"></div>
+                    <div class="money-bar" style="left: ${POSITIONS.rect_you_x}px; top: ${POSITIONS.rect_you_y}px; width: ${youBarWidth}px;"></div>
+                    
+                    <!-- 评分滑块 -->
+                    <div style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, -50%); width: 600px;">
+                        <div style="width: 550px; height: 26px; background: linear-gradient(to right, #FF0000, #FFFF00, #00FF00); position: relative; margin: 0 auto;">
+                            <div id="slider" style="position: absolute; width: 10px; height: 100%; background-color: #000; left: 50%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 18px;">
+                            <span>非常不公平</span>
+                            <span>非常公平</span>
+                        </div>
+                    </div>
+                    
+                    <div style="position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); font-size: 20px; color: #FFD700;">
+                        使用 N/M 键调整评分，按空格键确认
+                    </div>
+                </div>
+                `;
+            },
+            choices: ['n', 'm', ' '],
+            trial_duration: 60000,
+            data: {
+                trial_type: 'rating',
+                rating_number: ratingNum,
+                discount: discount,
+                total_money: totalMoney
+            },
+            on_load: function() {
+                let sliderPosition = 50; // 初始位置百分比
+                const slider = document.getElementById('slider');
+                
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'n' && sliderPosition > 0) {
+                        sliderPosition = Math.max(0, sliderPosition - 2);
+                        slider.style.left = sliderPosition + '%';
+                    } else if (e.key === 'm' && sliderPosition < 100) {
+                        sliderPosition = Math.min(100, sliderPosition + 2);
+                        slider.style.left = sliderPosition + '%';
+                    }
+                });
+                
+                // 保存最终位置
+                jsPsych.data.get().last(1).values()[0].rating_value = sliderPosition;
+            }
+        };
+    }
+    
+    // 添加评分试次
+    const eDiscountRates = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5];
+    const ratingConditions = [];
+    
+    // 生成评分条件
+    for (let i = 0; i < GAP_POINTS; i++) {
+        ratingConditions.push({type: 1, discount: eDiscountRates[i]});
+    }
+    ratingConditions.push({type: 2, discount: 1.0}); // You get all
+    ratingConditions.push({type: 3, discount: 0.0}); // Other gets all
+    ratingConditions.push({type: 4, discount: -1}); // Both get nothing
+    
+    // 随机打乱评分试次
+    const shuffledRatings = shuffleArray(ratingConditions);
+    
+    // 评分指导语
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:24px; color:white; line-height:2;">
+            <p style="font-size:28px; color:#FFD700;">公平评分</p>
+            <p style="margin-top:30px;">接下来请您对不同的分配方案进行公平性评分</p>
+            <p style="margin-top:20px;">使用 N/M 键移动滑块，空格键确认</p>
+            <p style="margin-top:30px; font-size:20px;">准备好后，按<strong>空格键</strong>开始</p>
+        </div>
+        `,
+        choices: [' ']
+    });
+    
+    shuffledRatings.forEach((condition, index) => {
+        const totalMoney = MONEY_SET[Math.floor(Math.random() * MONEY_SET.length)];
+        if (condition.discount >= 0) {
+            timeline.push(createRatingTrial(index + 1, condition.discount, totalMoney));
+        }
+        
+        // 评分后空屏
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: generateFixation(),
+            choices: "NO_KEYS",
+            trial_duration: 1000
+        });
+    });
+    
+    // 结束页面
+    const debrief = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+            const judgmentTrials = jsPsych.data.get().filter({trial_type: 'number_judgment'});
+            const feedbackTrials = jsPsych.data.get().filter({trial_type: 'feedback'});
+            const ratingTrials = jsPsych.data.get().filter({trial_type: 'rating'});
+            
+            const avgRT = judgmentTrials.select('rt').mean().toFixed(2);
+            const totalTrials = judgmentTrials.count();
+            
+            return `
+            <div style="font-size:24px; text-align:center; line-height:2; color:white;">
+                <p style="font-size:32px; font-weight:bold; color:#4CAF50;">实验结束，感谢参与!</p>
+                <p style="margin-top:40px; border-top:2px solid #ddd; padding-top:20px;">
+                    <strong>实验统计:</strong>
+                </p>
+                <p>完成判断试次: <strong style="color:#2196F3;">${totalTrials}</strong></p>
+                <p>平均反应时: <strong style="color:#2196F3;">${avgRT} ms</strong></p>
+                <p>完成评分试次: <strong style="color:#2196F3;">${ratingTrials.count()}</strong></p>
+                <p style="margin-top:50px; font-size:20px; color:#FF5722;">
+                    按<strong>空格键</strong>下载数据
+                </p>
+            </div>
+            `;
+        },
+        choices: [' ']
+    };
+    timeline.push(debrief);
+    
+    // 随机打乱函数
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+    
+    // 显示并保存结果
+    function displayResults() {
+        const allData = jsPsych.data.get();
+        
+        // 判断任务数据
+        const judgmentTrials = allData.filter({trial_type: 'number_judgment'});
+        const decisionTrials = allData.filter({trial_type: 'allocation_decision'});
+        const ratingTrials = allData.filter({trial_type: 'rating'});
+        
+        console.log('=== 实验数据汇总 ===');
+        console.log('被试ID:', experimentData.subjectID);
+        console.log('Run编号:', experimentData.runNum);
+        console.log('判断试次数:', judgmentTrials.count());
+        console.log('平均反应时:', judgmentTrials.select('rt').mean().toFixed(2) + ' ms');
+        console.log('评分试次数:', ratingTrials.count());
+        
+        // 准备CSV数据 - 判断任务
+        const judgmentData = judgmentTrials.values().map((trial, index) => {
+            const decision = decisionTrials.values()[index];
+            return {
+                trial_number: trial.trial_number,
+                condition_type: trial.condition_type,
+                present_number: trial.present_number,
+                response_code: trial.response_code,
+                rt: trial.rt,
+                total_money: decision ? decision.total_money : '',
+                discount: decision ? decision.discount : '',
+                money_you: decision ? decision.money_you : '',
+                money_he: decision ? decision.money_he : '',
+                decision: decision ? decision.decision : ''
+            };
+        });
+        
+        // 准备CSV数据 - 评分任务
+        const ratingData = ratingTrials.values().map(trial => ({
+            rating_number: trial.rating_number,
+            discount: trial.discount,
+            total_money: trial.total_money,
+            rating_value: trial.rating_value || 50
+        }));
+        
+        // 保存判断任务数据
+        const judgmentCSV = convertToCSV(judgmentData);
+        const judgmentFilename = `UG_Judgment_${experimentData.subjectID}_Run${experimentData.runNum}.csv`;
+        downloadCSV(judgmentCSV, judgmentFilename);
+        
+        // 保存评分数据
+        const ratingCSV = convertToCSV(ratingData);
+        const ratingFilename = `UG_Rating_${experimentData.subjectID}_Run${experimentData.runNum}.csv`;
+        downloadCSV(ratingCSV, ratingFilename);
+        
+        console.log('数据已保存');
+    }
+    
+    // CSV转换
+    function convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        let csv = headers.join(',') + '\n';
+        
+        data.forEach(row => {
+            const values = headers.map(header => {
+                const value = row[header];
+                if (value === null || value === undefined || value === '') return '';
+                if (String(value).includes(',')) return `"${value}"`;
+                return value;
+            });
+            csv += values.join(',') + '\n';
+        });
+        
+        return csv;
+    }
+    
+    // CSV下载
+    function downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // 运行实验
+    jsPsych.run(timeline);
+</script>
+</html>

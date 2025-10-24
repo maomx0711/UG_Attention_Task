@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瑞文标准推理测验（SPM）</title>
+    
+    <!-- 本地 jsPsych 库 -->
+    <script src="./jspsych/jspsych.js"></script>
+    <link rel="stylesheet" href="./jspsych/jspsych.css">
+    <script src="./jspsych/plugin-html-keyboard-response.js"></script>
+    <script src="./jspsych/plugin-html-button-response.js"></script>
+    <script src="./jspsych/plugin-image-button-response.js"></script>
+    
+    <style>
+    body { 
+        user-select: none; 
+        -ms-user-select: none; 
+        -moz-user-select: none; 
+        -webkit-user-select: none;
+        background-color: #f5f5f5;
+        color: #333;
+        font-size: 16pt;
+        font-family: 微软雅黑, Arial, sans-serif;
+        line-height: 1.6em;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .jspsych-content {
+        max-width: 1200px;
+        margin: auto;
+    }
+    
+    .jspsych-btn { 
+        font-size: 14pt; 
+        font-family: 微软雅黑, Arial, sans-serif; 
+        font-weight: normal; 
+        margin: 0.5em 0.3em;
+        padding: 10px 25px;
+        border-radius: 5px;
+        background-color: #5c7cfa;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        min-width: 100px;
+    }
+    
+    .jspsych-btn:hover {
+        background-color: #4c6ef5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .jspsych-btn:disabled {
+        background-color: #ced4da;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .test-container {
+        background-color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin: 20px auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-width: 1000px;
+    }
+    
+    .test-title {
+        font-size: 24pt;
+        font-weight: bold;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .test-instruction {
+        font-size: 16pt;
+        line-height: 1.8em;
+        color: #495057;
+        margin: 20px 0;
+    }
+    
+    .progress-info {
+        text-align: center;
+        font-size: 18pt;
+        color: #495057;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+    
+    .progress-bar-container {
+        width: 100%;
+        height: 20px;
+        background-color: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #5c7cfa, #4c6ef5);
+        transition: width 0.3s ease;
+    }
+    
+    .matrix-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px 0;
+    }
+    
+    .matrix-problem {
+        background-color: white;
+        border: 3px solid #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .matrix-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .matrix-cell {
+        aspect-ratio: 1;
+        background-color: #f8f9fa;
+        border: 2px solid #adb5bd;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48pt;
+        font-weight: bold;
+        color: #495057;
+        position: relative;
+    }
+    
+    .matrix-cell.missing {
+        background: repeating-linear-gradient(
+            45deg,
+            #f8f9fa,
+            #f8f9fa 10px,
+            #e9ecef 10px,
+            #e9ecef 20px
+        );
+        border: 2px dashed #868e96;
+    }
+    
+    .matrix-cell.missing::after {
+        content: '?';
+        font-size: 64pt;
+        color: #adb5bd;
+    }
+    
+    .options-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .option-button {
+        aspect-ratio: 1;
+        background-color: #f8f9fa;
+        border: 3px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36pt;
+        font-weight: bold;
+        color: #495057;
+        position: relative;
+        padding: 20px;
+    }
+    
+    .option-button:hover {
+        border-color: #5c7cfa;
+        background-color: #e7f5ff;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(92, 124, 250, 0.3);
+    }
+    
+    .option-button.selected {
+        border-color: #5c7cfa;
+        background-color: #dbe4ff;
+        box-shadow: 0 0 0 3px rgba(92, 124, 250, 0.2);
+    }
+    
+    .option-number {
+        position: absolute;
+        top: 5px;
+        left: 10px;
+        font-size: 14pt;
+        color: #868e96;
+        font-weight: normal;
+    }
+    
+    .result-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin: 20px 0;
+        text-align: center;
+    }
+    
+    .result-score {
+        font-size: 64pt;
+        font-weight: bold;
+        margin: 20px 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .result-level {
+        font-size: 24pt;
+        font-weight: bold;
+        margin: 15px 0;
+        padding: 10px 20px;
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        display: inline-block;
+    }
+    
+    .result-description {
+        font-size: 16pt;
+        line-height: 1.8em;
+        margin: 20px 0;
+        background-color: rgba(255,255,255,0.1);
+        padding: 20px;
+        border-radius: 10px;
+    }
+    
+    .iq-chart {
+        background-color: white;
+        color: #333;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px auto;
+        max-width: 600px;
+    }
+    
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+        color: #856404;
+    }
+    
+    /* 图形元素样式 */
+    .shape-circle {
+        width: 80%;
+        height: 80%;
+        border-radius: 50%;
+        background-color: currentColor;
+    }
+    
+    .shape-square {
+        width: 70%;
+        height: 70%;
+        background-color: currentColor;
+    }
+    
+    .shape-triangle {
+        width: 0;
+        height: 0;
+        border-left: 50px solid transparent;
+        border-right: 50px solid transparent;
+        border-bottom: 86.6px solid currentColor;
+    }
+    
+    .shape-diamond {
+        width: 60px;
+        height: 60px;
+        background-color: currentColor;
+        transform: rotate(45deg);
+    }
+    
+    .pattern-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    </style>
+</head>
+<body></body>
+
+<script>
+
+/* 全局设置 */
+function set_html_style() {
+    document.body.onselectstart = function() { return false }
+    document.body.oncontextmenu = function() { return false }
+    document.onkeydown = function(event) {
+        if ((event.keyCode in { 27: 'Esc', 116: 'F5', 123: 'F12' }) ||
+            (event.ctrlKey && event.keyCode in { 85: 'U' })
+        ) { return false }
+    }
+}
+
+/* 生成随机ID */
+function randomID(length) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
+const subID = randomID(8);
+const startTime = new Date().toISOString();
+
+/* 瑞文矩阵题目数据库 */
+// 这里创建简化版的类瑞文题目，实际使用时应替换为真实的图像
+const ravenProblems = [
+    // A组 - 简单模式完成（12题）
+    {
+        id: 'A1',
+        difficulty: 'A',
+        matrix: ['●', '●', '●', '●', '●', '●', '●', '●', null],
+        options: ['●', '○', '■', '◆', '▲', '★'],
+        correct: 0,
+        rule: '简单重复模式'
+    },
+    {
+        id: 'A2',
+        difficulty: 'A',
+        matrix: ['○', '○', '○', '○', '○', '○', '○', '○', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 0,
+        rule: '简单重复模式'
+    },
+    {
+        id: 'A3',
+        difficulty: 'A',
+        matrix: ['■', '■', '■', '■', '■', '■', '■', '■', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 2,
+        rule: '简单重复模式'
+    },
+    {
+        id: 'A4',
+        difficulty: 'A',
+        matrix: ['●', '○', '●', '○', '●', '○', '●', '○', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 1,
+        rule: '交替模式'
+    },
+    {
+        id: 'A5',
+        difficulty: 'A',
+        matrix: ['○', '●', '○', '●', '○', '●', '○', '●', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 0,
+        rule: '交替模式'
+    },
+    {
+        id: 'A6',
+        difficulty: 'A',
+        matrix: ['■', '●', '■', '●', '■', '●', '■', '●', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 2,
+        rule: '交替模式'
+    },
+    {
+        id: 'A7',
+        difficulty: 'A',
+        matrix: ['●', '●', '○', '●', '●', '○', '●', '●', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 0,
+        rule: '2-1重复模式'
+    },
+    {
+        id: 'A8',
+        difficulty: 'A',
+        matrix: ['■', '■', '●', '■', '■', '●', '■', '■', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 1,
+        rule: '2-1重复模式'
+    },
+    {
+        id: 'A9',
+        difficulty: 'A',
+        matrix: ['○', '■', '●', '○', '■', '●', '○', '■', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 1,
+        rule: '三元素循环'
+    },
+    {
+        id: 'A10',
+        difficulty: 'A',
+        matrix: ['●', '○', '■', '●', '○', '■', '●', '○', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 2,
+        rule: '三元素循环'
+    },
+    {
+        id: 'A11',
+        difficulty: 'A',
+        matrix: ['◆', '◆', '◆', '◆', '◆', '◆', '◆', '◆', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 3,
+        rule: '简单重复'
+    },
+    {
+        id: 'A12',
+        difficulty: 'A',
+        matrix: ['▲', '▲', '▲', '▲', '▲', '▲', '▲', '▲', null],
+        options: ['○', '●', '■', '◆', '▲', '★'],
+        correct: 4,
+        rule: '简单重复'
+    },
+
+    // B组 - 类比推理（12题）
+    {
+        id: 'B1',
+        difficulty: 'B',
+        matrix: ['●', '●●', '●●●', '○', '○○', '○○○', '■', '■■', null],
+        options: ['■', '■■', '■■■', '●●', '○○○', '◆◆◆'],
+        correct: 2,
+        rule: '数量递增'
+    },
+    {
+        id: 'B2',
+        difficulty: 'B',
+        matrix: ['●●●', '●●', '●', '○○○', '○○', '○', '■■■', '■■', null],
+        options: ['■', '■■', '■■■', '●●', '○○○', '◆'],
+        correct: 0,
+        rule: '数量递减'
+    },
+    {
+        id: 'B3',
+        difficulty: 'B',
+        matrix: ['●', '○', '●', '■', '□', '■', '▲', '△', null],
+        options: ['▲', '△', '●', '○', '■', '□'],
+        correct: 0,
+        rule: '形状对应'
+    },
+    {
+        id: 'B4',
+        difficulty: 'B',
+        matrix: ['○', '●', '◐', '△', '▲', '▽', '□', '■', null],
+        options: ['□', '■', '▦', '○', '◐', '●'],
+        correct: 2,
+        rule: '颜色渐变'
+    },
+    {
+        id: 'B5',
+        difficulty: 'B',
+        matrix: ['●', '●●', '○', '○', '○○', '●', '■', '■■', null],
+        options: ['○', '●', '■', '■■', '○○', '●●'],
+        correct: 0,
+        rule: '混合模式'
+    },
+    {
+        id: 'B6',
+        difficulty: 'B',
+        matrix: ['■', '■■', '■■■', '●', '●●', '●●●', '◆', '◆◆', null],
+        options: ['◆', '◆◆', '◆◆◆', '■', '●', '○'],
+        correct: 2,
+        rule: '递增模式'
+    },
+    {
+        id: 'B7',
+        difficulty: 'B',
+        matrix: ['○', '●', '○', '△', '▲', '△', '□', '■', null],
+        options: ['□', '■', '○', '●', '△', '▲'],
+        correct: 0,
+        rule: '空心实心交替'
+    },
+    {
+        id: 'B8',
+        difficulty: 'B',
+        matrix: ['●', '○○', '●●●', '■', '□□', '■■■', '▲', '△△', null],
+        options: ['▲', '▲▲', '▲▲▲', '●', '○', '■'],
+        correct: 2,
+        rule: '1-2-3模式'
+    },
+    {
+        id: 'B9',
+        difficulty: 'B',
+        matrix: ['○●', '●○', '○●', '□■', '■□', '□■', '△▲', '▲△', null],
+        options: ['△▲', '▲△', '○●', '●○', '□■', '■□'],
+        correct: 0,
+        rule: '位置交换'
+    },
+    {
+        id: 'B10',
+        difficulty: 'B',
+        matrix: ['●', '●●', '○', '■', '■■', '□', '◆', '◆◆', null],
+        options: ['○', '◇', '●', '■', '□', '◆'],
+        correct: 1,
+        rule: '实心与空心'
+    },
+    {
+        id: 'B11',
+        difficulty: 'B',
+        matrix: ['○', '●', '◐', '□', '■', '▦', '△', '▲', null],
+        options: ['▽', '▼', '◭', '○', '●', '■'],
+        correct: 2,
+        rule: '填充渐变'
+    },
+    {
+        id: 'B12',
+        difficulty: 'B',
+        matrix: ['●●●', '○○', '●', '■■■', '□□', '■', '◆◆◆', '◇◇', null],
+        options: ['◆', '◇', '●', '○', '■', '□'],
+        correct: 0,
+        rule: '3-2-1递减'
+    },
+
+    // C组 - 渐进模式（12题）
+    {
+        id: 'C1',
+        difficulty: 'C',
+        matrix: ['●', '●●', '●●●', '●●', '●●●', '●●●●', '●●●', '●●●●', null],
+        options: ['●●●', '●●●●', '●●●●●', '●●', '○○○', '■■■'],
+        correct: 2,
+        rule: '递增叠加'
+    },
+    {
+        id: 'C2',
+        difficulty: 'C',
+        matrix: ['○', '○●', '○●■', '●', '●■', '●■◆', '■', '■◆', null],
+        options: ['■◆▲', '■◆○', '●■◆', '○●■', '■■■', '◆◆◆'],
+        correct: 0,
+        rule: '累积增加'
+    },
+    {
+        id: 'C3',
+        difficulty: 'C',
+        matrix: ['●●●', '●●○', '●○○', '■■■', '■■□', '■□□', '◆◆◆', '◆◆◇', null],
+        options: ['◆◇◇', '◆◆◆', '○○○', '■■■', '●●●', '◇◇◇'],
+        correct: 0,
+        rule: '逐渐消失'
+    },
+    {
+        id: 'C4',
+        difficulty: 'C',
+        matrix: ['○', '●', '○●', '□', '■', '□■', '△', '▲', null],
+        options: ['△▲', '▲△', '○●', '●○', '□■', '■□'],
+        correct: 0,
+        rule: '配对组合'
+    },
+    {
+        id: 'C5',
+        difficulty: 'C',
+        matrix: ['●', '○○', '●●●', '■', '□□', '■■■', '◆', '◇◇', null],
+        options: ['◆◆◆', '◇◇◇', '●●●', '○○○', '■■■', '□□□'],
+        correct: 0,
+        rule: '1空2实3模式'
+    },
+    {
+        id: 'C6',
+        difficulty: 'C',
+        matrix: ['○●■', '●■◆', '■◆▲', '○■', '■◆', '◆▲', '○◆', '■▲', null],
+        options: ['◆★', '○▲', '●■', '■◆', '▲○', '◆●'],
+        correct: 0,
+        rule: '滑动窗口'
+    },
+    {
+        id: 'C7',
+        difficulty: 'C',
+        matrix: ['●', '●○', '●○■', '○', '○■', '○■◆', '■', '■◆', null],
+        options: ['■◆▲', '●○■', '○■◆', '■■■', '◆◆◆', '▲▲▲'],
+        correct: 0,
+        rule: '行列累加'
+    },
+    {
+        id: 'C8',
+        difficulty: 'C',
+        matrix: ['○○○', '○○●', '○●●', '□□□', '□□■', '□■■', '△△△', '△△▲', null],
+        options: ['△▲▲', '▲▲▲', '△△△', '○●●', '□■■', '●●●'],
+        correct: 0,
+        rule: '替换模式'
+    },
+    {
+        id: 'C9',
+        difficulty: 'C',
+        matrix: ['●', '●●○', '●●●○○', '■', '■■□', '■■■□□', '◆', '◆◆◇', null],
+        options: ['◆◆◆◇◇', '◇◇◇', '◆◆◆', '●●●', '■■■', '○○○'],
+        correct: 0,
+        rule: '倍增模式'
+    },
+    {
+        id: 'C10',
+        difficulty: 'C',
+        matrix: ['○●■', '●■◆', '■◆▲', '●■◆', '■◆▲', '◆▲★', '■◆▲', '◆▲★', null],
+        options: ['▲★○', '★○●', '○●■', '●■◆', '■◆▲', '◆▲★'],
+        correct: 0,
+        rule: '循环移位'
+    },
+    {
+        id: 'C11',
+        difficulty: 'C',
+        matrix: ['○', '○○', '○○○', '●', '●●', '●●●', '■', '■■', null],
+        options: ['■■', '■■■', '●●●', '○○○', '◆◆', '◆◆◆'],
+        correct: 1,
+        rule: '数量递增'
+    },
+    {
+        id: 'C12',
+        difficulty: 'C',
+        matrix: ['●○■', '○■◆', '■◆▲', '○■◆', '■◆▲', '◆▲★', '■◆▲', '◆▲★', null],
+        options: ['▲★●', '★●○', '●○■', '○■◆', '■◆▲', '◆▲★'],
+        correct: 0,
+        rule: '循环推进'
+    },
+
+    // D组 - 复杂推理（12题）
+    {
+        id: 'D1',
+        difficulty: 'D',
+        matrix: ['●○', '○●', '●○', '■□', '□■', '■□', '◆◇', '◇◆', null],
+        options: ['◆◇', '◇◆', '●○', '○●', '■□', '□■'],
+        correct: 0,
+        rule: '左右交换'
+    },
+    {
+        id: 'D2',
+        difficulty: 'D',
+        matrix: ['●●○', '●○○', '○○○', '■■□', '■□□', '□□□', '◆◆◇', '◆◇◇', null],
+        options: ['◇◇◇', '◆◆◆', '○○○', '■■■', '●●●', '□□□'],
+        correct: 0,
+        rule: '逐步消除'
+    },
+    {
+        id: 'D3',
+        difficulty: 'D',
+        matrix: ['○', '○●', '○●■', '●', '●■', '●■◆', '■', '■◆', null],
+        options: ['■◆▲', '■◆●', '●■◆', '○●■', '◆▲★', '▲★○'],
+        correct: 0,
+        rule: '累积添加'
+    },
+    {
+        id: 'D4',
+        difficulty: 'D',
+        matrix: ['●●●', '○●●', '○○●', '■■■', '□■■', '□□■', '◆◆◆', '◇◆◆', null],
+        options: ['◇◇◆', '◇◇◇', '◆◆◆', '●●●', '○○○', '■■■'],
+        correct: 0,
+        rule: '从左到右消除'
+    },
+    {
+        id: 'D5',
+        difficulty: 'D',
+        matrix: ['○●', '●■', '■◆', '●■', '■◆', '◆▲', '■◆', '◆▲', null],
+        options: ['▲★', '★○', '○●', '●■', '■◆', '◆▲'],
+        correct: 0,
+        rule: '连续转换'
+    },
+    {
+        id: 'D6',
+        difficulty: 'D',
+        matrix: ['●', '●●', '○', '●●', '●●●', '○○', '●●●', '●●●●', null],
+        options: ['○', '○○', '○○○', '●', '●●', '●●●'],
+        correct: 2,
+        rule: '实空配对递增'
+    },
+    {
+        id: 'D7',
+        difficulty: 'D',
+        matrix: ['○●■', '●■○', '■○●', '□■◆', '■◆□', '◆□■', '△▲★', '▲★△', null],
+        options: ['★△▲', '△★▲', '▲△★', '○●■', '●■○', '■○●'],
+        correct: 0,
+        rule: '循环排列'
+    },
+    {
+        id: 'D8',
+        difficulty: 'D',
+        matrix: ['●', '○○', '●●●', '■', '□□', '■■■', '◆', '◇◇', null],
+        options: ['◆◆◆', '◇◇◇', '●●●', '○○○', '■■■', '□□□'],
+        correct: 0,
+        rule: '1实2空3实'
+    },
+    {
+        id: 'D9',
+        difficulty: 'D',
+        matrix: ['○○○', '●○○', '●●○', '□□□', '■□□', '■■□', '△△△', '▲△△', null],
+        options: ['▲▲△', '▲▲▲', '△△△', '○○○', '●●●', '■■■'],
+        correct: 0,
+        rule: '从左填充'
+    },
+    {
+        id: 'D10',
+        difficulty: 'D',
+        matrix: ['●○', '○●■', '●■◆', '■□', '□■◆', '■◆▲', '◆◇', '◇◆▲', null],
+        options: ['◆▲★', '▲★○', '★○●', '○●■', '●■◆', '■◆▲'],
+        correct: 0,
+        rule: '交替扩展'
+    },
+    {
+        id: 'D11',
+        difficulty: 'D',
+        matrix: ['○●■', '●■◆', '■◆▲', '●■', '■◆', '◆▲', '●', '■', null],
+        options: ['◆', '▲', '●', '○', '■', '□'],
+        correct: 0,
+        rule: '逐步简化'
+    },
+    {
+        id: 'D12',
+        difficulty: 'D',
+        matrix: ['●○●', '○●○', '●○●', '■□■', '□■□', '■□■', '◆◇◆', '◇◆◇', null],
+        options: ['◆◇◆', '◇◆◇', '●○●', '○●○', '■□■', '□■□'],
+        correct: 0,
+        rule: '对称镜像'
+    },
+
+    // E组 - 高级推理（12题）
+    {
+        id: 'E1',
+        difficulty: 'E',
+        matrix: ['○●■◆', '●■◆▲', '■◆▲★', '●■◆', '■◆▲', '◆▲★', '●■', '■◆', null],
+        options: ['◆▲', '▲★', '★○', '○●', '●■', '■◆'],
+        correct: 0,
+        rule: '递减窗口'
+    },
+    {
+        id: 'E2',
+        difficulty: 'E',
+        matrix: ['●', '●○', '●○■', '○', '○■', '○■◆', '■', '■◆', null],
+        options: ['■◆▲', '◆▲★', '▲★○', '★○●', '○●■', '●■◆'],
+        correct: 0,
+        rule: '对角线累加'
+    },
+    {
+        id: 'E3',
+        difficulty: 'E',
+        matrix: ['●●●', '○●●', '○○●', '■■■', '□■■', '□□■', '◆◆◆', '◇◆◆', null],
+        options: ['◇◇◆', '◇◇◇', '◆◆◆', '●●●', '○○○', '■■■'],
+        correct: 0,
+        rule: '波浪消除'
+    },
+    {
+        id: 'E4',
+        difficulty: 'E',
+        matrix: ['○●■', '●■◆', '■◆▲', '○■', '■◆', '◆▲', '○', '■', null],
+        options: ['◆', '▲', '★', '○', '●', '■'],
+        correct: 0,
+        rule: '对角线简化'
+    },
+    {
+        id: 'E5',
+        difficulty: 'E',
+        matrix: ['●○●', '○●○', '●○●', '■□■', '□■□', '■□■', '◆◇◆', '◇◆◇', null],
+        options: ['◆◇◆', '◇◆◇', '●○●', '○●○', '■□■', '□■□'],
+        correct: 0,
+        rule: '中心对称'
+    },
+    {
+        id: 'E6',
+        difficulty: 'E',
+        matrix: ['○', '●○', '■●○', '●', '■●', '◆■●', '■', '◆■', null],
+        options: ['▲◆■', '★▲◆', '○●■', '●■◆', '■◆▲', '◆▲★'],
+        correct: 0,
+        rule: '逆序累加'
+    },
+    {
+        id: 'E7',
+        difficulty: 'E',
+        matrix: ['●●●○', '●●○○', '●○○○', '■■■□', '■■□□', '■□□□', '◆◆◆◇', '◆◆◇◇', null],
+        options: ['◆◇◇◇', '◇◇◇◇', '◆◆◆◆', '●●●●', '○○○○', '■■■■'],
+        correct: 0,
+        rule: '渐变转换'
+    },
+    {
+        id: 'E8',
+        difficulty: 'E',
+        matrix: ['○●■', '●■◆', '■◆▲', '■◆▲', '◆▲★', '▲★○', '▲★○', '★○●', null],
+        options: ['○●■', '●■◆', '■◆▲', '◆▲★', '▲★○', '★○●'],
+        correct: 0,
+        rule: '双层循环'
+    },
+    {
+        id: 'E9',
+        difficulty: 'E',
+        matrix: ['●', '○●', '■○●', '○', '■○', '◆■○', '■', '◆■', null],
+        options: ['▲◆■', '★▲◆', '○●■', '●○■', '■○●', '○■●'],
+        correct: 0,
+        rule: '反向堆叠'
+    },
+    {
+        id: 'E10',
+        difficulty: 'E',
+        matrix: ['○●■◆▲', '●■◆▲★', '■◆▲★○', '○●■◆', '●■◆▲', '■◆▲★', '○●■', '●■◆', null],
+        options: ['■◆▲', '◆▲★', '▲★○', '★○●', '○●■', '●■◆'],
+        correct: 0,
+        rule: '递减移位'
+    },
+    {
+        id: 'E11',
+        difficulty: 'E',
+        matrix: ['●○●○●', '○●○●○', '●○●○●', '■□■□■', '□■□■□', '■□■□■', '◆◇◆◇◆', '◇◆◇◆◇', null],
+        options: ['◆◇◆◇◆', '◇◆◇◆◇', '●○●○●', '○●○●○', '■□■□■', '□■□■□'],
+        correct: 0,
+        rule: '棋盘对称'
+    },
+    {
+        id: 'E12',
+        difficulty: 'E',
+        matrix: ['○●■◆', '●■◆▲', '■◆▲★', '●■◆▲', '■◆▲★', '◆▲★○', '■◆▲★', '◆▲★○', null],
+        options: ['▲★○●', '★○●■', '○●■◆', '●■◆▲', '■◆▲★', '◆▲★○'],
+        correct: 0,
+        rule: '复杂循环'
+    }
+];
+
+// 随机选择36题（每组6题）
+function selectProblems() {
+    let selected = [];
+    ['A', 'B', 'C', 'D', 'E'].forEach(difficulty => {
+        let difficultyProblems = ravenProblems.filter(p => p.difficulty === difficulty);
+        // 随机打乱并选择前6题
+        let shuffled = difficultyProblems.sort(() => Math.random() - 0.5).slice(0, 6);
+        selected = selected.concat(shuffled);
+    });
+    return selected;
+}
+
+const selectedProblems = selectProblems();
+let currentProblemIndex = 0;
+
+/* 创建矩阵题目 */
+function createMatrixProblem(problem, index) {
+    return {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            let html = `
+            <div class="test-container">
+                <div class="progress-info">题目 ${index + 1} / ${selectedProblems.length}</div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${((index + 1) / selectedProblems.length * 100)}%"></div>
+                </div>
+                
+                <div class="matrix-container">
+                    <div class="matrix-problem">
+                        <div class="matrix-grid">`
+            
+            // 生成3x3矩阵
+            for (let i = 0; i < 9; i++) {
+                if (problem.matrix[i] === null) {
+                    html += `<div class="matrix-cell missing"></div>`
+                } else {
+                    html += `<div class="matrix-cell">${problem.matrix[i]}</div>`
+                }
+            }
+            
+            html += `</div>
+                    </div>
+                    
+                    <div style="text-align: center; font-size: 16pt; color: #495057; margin: 20px 0;">
+                        <b>请选择正确的答案填入空白处</b>
+                    </div>
+                    
+                    <div class="options-container">`
+            
+            // 生成选项按钮
+            for (let i = 0; i < problem.options.length; i++) {
+                html += `<div class="option-button" data-choice="${i}">
+                    <span class="option-number">${i + 1}</span>
+                    <span>${problem.options[i]}</span>
+                </div>`
+            }
+            
+            html += `</div>
+                </div>
+            </div>`
+            
+            return html
+        },
+        choices: ['提交答案'],
+        on_load: function() {
+            let button = document.querySelector('.jspsych-btn')
+            button.disabled = true
+            
+            let options = document.querySelectorAll('.option-button')
+            let selectedOption = null
+            
+            options.forEach(function(option) {
+                option.addEventListener('click', function() {
+                    options.forEach(opt => opt.classList.remove('selected'))
+                    option.classList.add('selected')
+                    selectedOption = parseInt(option.getAttribute('data-choice'))
+                    button.disabled = false
+                })
+            })
+            
+            // 存储选择的选项
+            button.onclick = function() {
+                if (selectedOption !== null) {
+                    jsPsych.data.addProperties({
+                        user_choice: selectedOption
+                    })
+                }
+            }
+        },
+        on_finish: function(data) {
+            let selectedOption = data.user_choice
+            let isCorrect = (selectedOption === problem.correct)
+            
+            data.problem_id = problem.id
+            data.difficulty = problem.difficulty
+            data.correct_answer = problem.correct
+            data.user_answer = selectedOption
+            data.is_correct = isCorrect
+            data.rule = problem.rule
+            data.participant_id = subID
+            data.problem_number = index + 1
+        }
+    }
+}
+
+/* 初始化 jsPsych */
+const jsPsych = initJsPsych({
+    on_finish: function() {
+        jsPsych.data.get().localSave('csv', `data_raven_${subID}_${new Date().toISOString().slice(0,10)}.csv`)
+    }
+})
+
+/* 欢迎页面 */
+var welcome = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="test-container">
+        <div class="test-title">🧠 瑞文标准推理测验（SPM）</div>
+        <div class="test-instruction">
+            <h2 style="color: #5c7cfa;">欢迎参加智力测验</h2>
+            <p>
+            瑞文标准推理测验（Standard Progressive Matrices）是一种非文字的智力测验，
+            主要测量您的<b>抽象推理能力</b>和<b>逻辑思维能力</b>。
+            </p>
+            <p>
+            <b>测验说明：</b><br/>
+            • 本测验共有 <b>60题</b>，分为A、B、C、D、E五个难度等级<br/>
+            • 每题呈现一个3×3的图形矩阵，右下角缺失一个图形<br/>
+            • 您需要从6个选项中选择最合适的图形来完成矩阵<br/>
+            • 建议在 <b>40分钟</b> 内完成全部题目<br/>
+            • 题目难度会逐渐增加，请尽力而为
+            </p>
+            <div class="warning-box">
+                <b>⚠️ 注意事项：</b><br/>
+                • 请在安静的环境中独立完成测验<br/>
+                • 请认真观察图形规律，仔细思考后作答<br/>
+                • 一旦提交答案，无法返回修改<br/>
+                • 请勿使用任何辅助工具或查阅资料
+            </div>
+            <p style="text-align: center; margin-top: 30px;">
+            准备好了吗？让我们开始吧！
+            </p>
+        </div>
+    </div>`,
+    choices: ['开始测验'],
+    on_start: set_html_style,
+    on_finish: function(data) {
+        data.participant_id = subID
+        data.start_time = startTime
+        data.user_agent = navigator.userAgent
+    }
+}
+
+/* 练习题说明 */
+var practice_instruction = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="test-container">
+        <div class="test-title">📝 测验说明</div>
+        <div class="test-instruction">
+            <h3>如何答题</h3>
+            <p style="font-size: 18pt; line-height: 2em;">
+            1️⃣ <b>观察矩阵</b>：仔细观察3×3矩阵中的图形规律<br/>
+            2️⃣ <b>发现规律</b>：思考图形之间的关系（形状、数量、位置、方向等）<br/>
+            3️⃣ <b>选择答案</b>：点击最符合规律的选项<br/>
+            4️⃣ <b>确认提交</b>：点击"提交答案"按钮进入下一题
+            </p>
+            <p style="color: #e74c3c; font-size: 18pt;">
+            <b>提示：</b>图形可能遵循以下规律：<br/>
+            • 重复模式<br/>
+            • 交替变化<br/>
+            • 数量递增/递减<br/>
+            • 位置移动<br/>
+            • 形状组合<br/>
+            • 对称镜像
+            </p>
+        </div>
+    </div>`,
+    choices: ['我已了解，开始答题']
+}
+
+/* 计算分数和IQ */
+var calculate_results = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+        var data = jsPsych.data.get().filter({problem_id: /.+/})
+        var correct_count = data.filter({is_correct: true}).count()
+        var total_count = data.count()
+        var accuracy = (correct_count / total_count * 100).toFixed(1)
+        
+        // 计算各难度的正确率
+        var accuracy_by_level = {}
+        ;['A', 'B', 'C', 'D', 'E'].forEach(level => {
+            var level_data = data.filter({difficulty: level})
+            var level_correct = level_data.filter({is_correct: true}).count()
+            var level_total = level_data.count()
+            accuracy_by_level[level] = level_total > 0 ? (level_correct / level_total * 100).toFixed(1) : 0
+        })
+        
+        // 根据正确数估算IQ（简化版，实际需要标准化常模）
+        // 标准分转换：平均分30题，标准差约8题
+        var iq = Math.round(100 + ((correct_count - 30) / 8) * 15)
+        iq = Math.max(70, Math.min(130, iq)) // 限制在70-130范围
+        
+        // IQ等级判断
+        var iq_level = ''
+        var iq_description = ''
+        if (iq >= 130) {
+            iq_level = '🌟 极优秀'
+            iq_description = '您的抽象推理能力非常出色，在人群中名列前茅（约前2%）。'
+        } else if (iq >= 120) {
+            iq_level = '⭐ 优秀'
+            iq_description = '您的抽象推理能力优秀，高于大多数人（约前10%）。'
+        } else if (iq >= 110) {
+            iq_level = '✨ 中上'
+            iq_description = '您的抽象推理能力中上，好于平均水平。'
+        } else if (iq >= 90) {
+            iq_level = '✅ 中等'
+            iq_description = '您的抽象推理能力处于正常范围，与多数人相当。'
+        } else if (iq >= 80) {
+            iq_level = '💡 中下'
+            iq_description = '您的抽象推理能力略低于平均水平，仍在正常范围内。'
+        } else {
+            iq_level = '📊 偏低'
+            iq_description = '您的抽象推理能力可能需要更多练习来提升。'
+        }
+        
+        return `
+        <div style="max-width: 900px; margin: auto;">
+            <div class="result-box">
+                <h1 style="margin: 0;">🎉 测评完成！</h1>
+                <div class="result-score">${correct_count} / ${total_count}</div>
+                <div style="font-size: 20pt;">正确率：${accuracy}%</div>
+                <div class="result-level">${iq_level}</div>
+                <div style="font-size: 28pt; margin: 20px 0;">
+                    估算IQ：<span style="font-size: 48pt; font-weight: bold;">${iq}</span>
+                </div>
+                <div class="result-description">${iq_description}</div>
+            </div>
+            
+            <div class="iq-chart">
+                <h3 style="text-align: center; color: #2c3e50;">📊 各难度等级表现</h3>
+                <div style="padding: 20px;">
+                    <div style="margin: 10px 0;">
+                        <b>A组（基础）：</b>${accuracy_by_level['A']}% 
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 5px;">
+                            <div style="background: linear-gradient(90deg, #51cf66, #37b24d); height: 100%; width: ${accuracy_by_level['A']}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <b>B组（简单）：</b>${accuracy_by_level['B']}%
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 5px;">
+                            <div style="background: linear-gradient(90deg, #4dabf7, #228be6); height: 100%; width: ${accuracy_by_level['B']}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <b>C组（中等）：</b>${accuracy_by_level['C']}%
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 5px;">
+                            <div style="background: linear-gradient(90deg, #ffd43b, #fab005); height: 100%; width: ${accuracy_by_level['C']}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <b>D组（困难）：</b>${accuracy_by_level['D']}%
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 5px;">
+                            <div style="background: linear-gradient(90deg, #ff8787, #fa5252); height: 100%; width: ${accuracy_by_level['D']}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <b>E组（高级）：</b>${accuracy_by_level['E']}%
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; margin-top: 5px;">
+                            <div style="background: linear-gradient(90deg, #da77f2, #cc5de8); height: 100%; width: ${accuracy_by_level['E']}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="warning-box" style="margin: 20px auto; max-width: 800px;">
+                <p style="margin: 0; font-size: 14pt;">
+                <b>📌 结果说明：</b><br/>
+                • 本测验结果仅供参考，不能作为专业诊断依据<br/>
+                • IQ估算基于简化算法，实际IQ需要专业机构标准化测试<br/>
+                • 智力是多维度的，本测验主要反映抽象推理能力<br/>
+                • 测验成绩可能受到多种因素影响（如疲劳、环境等）
+                </p>
+            </div>
+            
+            <p style="text-align: center; font-size: 14pt; color: #868e96; margin: 30px 0;">
+            测试编号：${subID}<br/>
+            完成时间：${new Date().toLocaleString('zh-CN')}<br/><br/>
+            按任意键下载详细数据
+            </p>
+        </div>`
+    },
+    on_finish: function(data) {
+        data.varname = 'final_results'
+        data.participant_id = subID
+        data.end_time = new Date().toISOString()
+    }
+}
+
+/* 结束页面 */
+var thank_you = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div style="text-align: center; padding: 50px;">
+        <h1 style="color: #5c7cfa;">✅ 测验完成！</h1>
+        <p style="font-size: 20pt; margin: 30px 0;">感谢您的参与</p>
+        <p style="font-size: 16pt; color: #868e96;">
+        数据已自动保存<br/>
+        您可以关闭此页面
+        </p>
+        <p style="font-size: 14pt; color: #adb5bd; margin-top: 50px;">
+        按任意键结束
+        </p>
+    </div>`,
+    on_finish: function() {
+        document.body.style.cursor = 'default'
+    }
+}
+
+/* 构建时间线 */
+var timeline = [welcome, practice_instruction]
+
+// 添加所有题目
+for (let i = 0; i < selectedProblems.length; i++) {
+    timeline.push(createMatrixProblem(selectedProblems[i], i))
+}
+
+timeline.push(calculate_results)
+timeline.push(thank_you)
+
+/* 运行实验 */
+jsPsych.run(timeline)
+
+</script>
+
+</html>

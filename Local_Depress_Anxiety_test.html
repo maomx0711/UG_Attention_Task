@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心理量表测评</title>
+    
+    <!-- 本地 jsPsych 库 -->
+    <script src="./jspsych/jspsych.js"></script>
+    <link rel="stylesheet" href="./jspsych/jspsych.css">
+    <script src="./jspsych/plugin-html-keyboard-response.js"></script>
+    <script src="./jspsych/plugin-html-button-response.js"></script>
+    <script src="./jspsych/plugin-survey-text.js"></script>
+    
+    <style>
+    body { 
+        user-select: none; 
+        -ms-user-select: none; 
+        -moz-user-select: none; 
+        -webkit-user-select: none;
+        background-color: rgb(250, 250, 250);
+        color: black;
+        font-size: 18pt;
+        font-family: 微软雅黑, Arial, sans-serif;
+        line-height: 1.8em;
+    }
+    
+    .jspsych-btn { 
+        font-size: 16pt; 
+        font-family: 微软雅黑, Arial, sans-serif; 
+        font-weight: normal; 
+        margin: 0.8em 0.3em;
+        padding: 12px 30px;
+        border-radius: 5px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .jspsych-btn:hover {
+        background-color: #45a049;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .jspsych-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .scale-question {
+        margin: 30px auto;
+        padding: 20px;
+        max-width: 900px;
+        text-align: left;
+    }
+    
+    .scale-title {
+        font-size: 22pt;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #2c3e50;
+        text-align: center;
+    }
+    
+    .scale-instruction {
+        font-size: 16pt;
+        color: #555;
+        margin-bottom: 25px;
+        line-height: 1.6em;
+        background-color: #e8f4f8;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #3498db;
+    }
+    
+    .question-text {
+        font-size: 18pt;
+        margin-bottom: 20px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .progress-bar {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 14pt;
+        margin-bottom: 15px;
+    }
+    
+    .option-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .option-label {
+        display: block;
+        padding: 15px 20px;
+        background-color: #ffffff;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 16pt;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .option-label:hover {
+        background-color: #f0f8ff;
+        border-color: #4CAF50;
+        transform: translateX(5px);
+    }
+    
+    .option-label input[type="radio"] {
+        margin-right: 15px;
+        transform: scale(1.3);
+        cursor: pointer;
+    }
+    
+    .option-label.selected {
+        background-color: #d4edda;
+        border-color: #28a745;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
+    }
+    
+    .result-box {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 25px;
+        margin: 20px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .score-display {
+        font-size: 28pt;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .interpretation {
+        font-size: 18pt;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    
+    .normal { background-color: #d4edda; color: #155724; }
+    .mild { background-color: #fff3cd; color: #856404; }
+    .moderate { background-color: #f8d7da; color: #721c24; }
+    .severe { background-color: #f5c6cb; color: #721c24; }
+    
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+    }
+    </style>
+</head>
+<body></body>
+
+<script>
+
+/* 全局设置 */
+function set_html_style() {
+    document.body.onselectstart = function() { return false }
+    document.body.oncontextmenu = function() { return false }
+    document.onkeydown = function(event) {
+        if ((event.keyCode in { 27: 'Esc', 116: 'F5', 123: 'F12' }) ||
+            (event.ctrlKey && event.keyCode in { 85: 'U' })
+        ) { return false }
+    }
+}
+
+/* 生成随机ID */
+function randomID(length) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
+const subID = randomID(8);
+const startTime = new Date().toISOString();
+
+/* 贝克抑郁量表 BDI-II (21题) */
+const BDI_questions = [
+    {
+        prompt: "1. 悲伤",
+        options: [
+            "我不感到悲伤",
+            "我常常感到悲伤",
+            "我一直很悲伤",
+            "我太悲伤或不快乐，无法忍受"
+        ],
+        name: 'BDI_1'
+    },
+    {
+        prompt: "2. 悲观",
+        options: [
+            "我对将来并不悲观",
+            "我对将来感到心灰意冷",
+            "我觉得前途没有什么指望",
+            "我认为将来毫无希望，情况也不会改善"
+        ],
+        name: 'BDI_2'
+    },
+    {
+        prompt: "3. 过去的失败",
+        options: [
+            "我不觉得是个失败者",
+            "我觉得比一般人失败得多",
+            "回顾往事，我能看到的是很多次失败",
+            "我觉得我是一个彻底失败的人"
+        ],
+        name: 'BDI_3'
+    },
+    {
+        prompt: "4. 丧失愉快感",
+        options: [
+            "我从各种事物中体验到的愉快和过去一样",
+            "我不像过去那样能从各种事物中得到愉快",
+            "我再也不能从各种事物中得到真正的满足",
+            "我对一切都不满意或感到厌烦"
+        ],
+        name: 'BDI_4'
+    },
+    {
+        prompt: "5. 内疚感",
+        options: [
+            "我没有什么特别内疚的感觉",
+            "在许多时候我感到内疚",
+            "在大部分时间内我感到内疚",
+            "在任何时候我都感到内疚"
+        ],
+        name: 'BDI_5'
+    },
+    {
+        prompt: "6. 惩罚感",
+        options: [
+            "我不觉得我会受到惩罚",
+            "我觉得我可能会受到惩罚",
+            "我预料到我会受到惩罚",
+            "我觉得我正在受到惩罚"
+        ],
+        name: 'BDI_6'
+    },
+    {
+        prompt: "7. 自我厌恶",
+        options: [
+            "我对自己的看法和过去一样",
+            "我对自己失去了信心",
+            "我对自己感到失望",
+            "我讨厌自己"
+        ],
+        name: 'BDI_7'
+    },
+    {
+        prompt: "8. 自我指责",
+        options: [
+            "我批评自己的缺点并不比平时多",
+            "我比过去更多地批评自己",
+            "我指责自己的一切过错",
+            "我指责自己所有的不幸"
+        ],
+        name: 'BDI_8'
+    },
+    {
+        prompt: "9. 自杀想法或愿望",
+        options: [
+            "我没有任何想弄死自己的念头",
+            "我有自杀的念头，但我不会去做",
+            "我想自杀",
+            "如果有机会我会自杀"
+        ],
+        name: 'BDI_9'
+    },
+    {
+        prompt: "10. 哭泣",
+        options: [
+            "我哭泣并不比平时多",
+            "我比过去哭得多",
+            "我现在总是哭泣",
+            "我过去能哭泣，但现在想哭也哭不出来"
+        ],
+        name: 'BDI_10'
+    },
+    {
+        prompt: "11. 激惹",
+        options: [
+            "我并不比平时更易激惹或烦躁",
+            "我比平时更容易激惹或烦躁",
+            "我总是感到激惹或烦躁",
+            "过去使我激惹或烦躁的事现在丝毫不能使我激惹或烦躁"
+        ],
+        name: 'BDI_11'
+    },
+    {
+        prompt: "12. 对他人的兴趣丧失",
+        options: [
+            "我对他人的兴趣没有丧失",
+            "我对他人的兴趣比过去减少了",
+            "我对他人的兴趣丧失了大部分",
+            "我对他人的兴趣已全部丧失"
+        ],
+        name: 'BDI_12'
+    },
+    {
+        prompt: "13. 犹豫不决",
+        options: [
+            "我做决定和过去一样好",
+            "我不如过去容易做决定",
+            "我发现做决定比以前困难得多",
+            "我再也不能做任何决定了"
+        ],
+        name: 'BDI_13'
+    },
+    {
+        prompt: "14. 无价值感",
+        options: [
+            "我觉得自己和过去一样有价值",
+            "我觉得自己不如过去有价值",
+            "我觉得自己很没用",
+            "我觉得自己毫无价值"
+        ],
+        name: 'BDI_14'
+    },
+    {
+        prompt: "15. 精力丧失",
+        options: [
+            "我和以前一样精力充沛",
+            "我不如以前精力充沛",
+            "我已没有多少精力",
+            "我一点精力也没有"
+        ],
+        name: 'BDI_15'
+    },
+    {
+        prompt: "16. 睡眠模式改变",
+        options: [
+            "我的睡眠模式没有改变",
+            "我比平时睡得多或少",
+            "我比平时睡得多得多或少得多",
+            "我整天都在睡或醒来后无法再入睡"
+        ],
+        name: 'BDI_16'
+    },
+    {
+        prompt: "17. 易激惹",
+        options: [
+            "我并不比平时更易激惹",
+            "我比平时更易激惹",
+            "我非常易激惹",
+            "我一直处于激惹状态"
+        ],
+        name: 'BDI_17'
+    },
+    {
+        prompt: "18. 食欲改变",
+        options: [
+            "我的食欲没有改变",
+            "我的食欲比以前差些",
+            "我的食欲比以前差得多",
+            "我根本没有食欲"
+        ],
+        name: 'BDI_18'
+    },
+    {
+        prompt: "19. 注意力不集中",
+        options: [
+            "我能和以前一样集中注意力",
+            "我不如以前能集中注意力",
+            "我难以长时间注意任何事",
+            "我发现自己不能注意任何事"
+        ],
+        name: 'BDI_19'
+    },
+    {
+        prompt: "20. 疲倦或疲劳",
+        options: [
+            "我并不比平时更疲倦或疲劳",
+            "我比以前更容易疲倦或疲劳",
+            "我太疲倦或疲劳，不能做许多过去能做的事",
+            "我太疲倦或疲劳，几乎不能做任何过去能做的事"
+        ],
+        name: 'BDI_20'
+    },
+    {
+        prompt: "21. 对性的兴趣丧失",
+        options: [
+            "我对性的兴趣没有改变",
+            "我对性的兴趣比过去减少了",
+            "我现在对性的兴趣少得多",
+            "我已完全丧失对性的兴趣"
+        ],
+        name: 'BDI_21'
+    }
+]
+
+/* 状态焦虑量表 STAI-S (20题) */
+const STAI_S_questions = [
+    { prompt: "1. 我感到心情平静", name: 'STAI_S_1' },
+    { prompt: "2. 我感到安全", name: 'STAI_S_2' },
+    { prompt: "3. 我感到紧张", name: 'STAI_S_3' },
+    { prompt: "4. 我感到焦虑紧张", name: 'STAI_S_4' },
+    { prompt: "5. 我感到轻松自在", name: 'STAI_S_5' },
+    { prompt: "6. 我感到心烦意乱", name: 'STAI_S_6' },
+    { prompt: "7. 我正担心可能发生不幸", name: 'STAI_S_7' },
+    { prompt: "8. 我感到满足", name: 'STAI_S_8' },
+    { prompt: "9. 我感到害怕", name: 'STAI_S_9' },
+    { prompt: "10. 我感到舒适", name: 'STAI_S_10' },
+    { prompt: "11. 我有自信心", name: 'STAI_S_11' },
+    { prompt: "12. 我感到神经过敏", name: 'STAI_S_12' },
+    { prompt: "13. 我神经紧张，坐立不安", name: 'STAI_S_13' },
+    { prompt: "14. 我感到犹豫不决", name: 'STAI_S_14' },
+    { prompt: "15. 我很放松", name: 'STAI_S_15' },
+    { prompt: "16. 我感到满意", name: 'STAI_S_16' },
+    { prompt: "17. 我担心", name: 'STAI_S_17' },
+    { prompt: "18. 我感到手足无措", name: 'STAI_S_18' },
+    { prompt: "19. 我感到稳定", name: 'STAI_S_19' },
+    { prompt: "20. 我感到愉快", name: 'STAI_S_20' }
+]
+
+/* 特质焦虑量表 STAI-T (20题) */
+const STAI_T_questions = [
+    { prompt: "1. 我感到愉快", name: 'STAI_T_1' },
+    { prompt: "2. 我容易疲劳", name: 'STAI_T_2' },
+    { prompt: "3. 我容易哭泣", name: 'STAI_T_3' },
+    { prompt: "4. 我希望我能像别人一样幸福", name: 'STAI_T_4' },
+    { prompt: "5. 我因为不能很快做出决定而失去机会", name: 'STAI_T_5' },
+    { prompt: "6. 我感到休息得很好", name: 'STAI_T_6' },
+    { prompt: "7. 我冷静、沉着、泰然自若", name: 'STAI_T_7' },
+    { prompt: "8. 我感到困难堆积如山，难以克服", name: 'STAI_T_8' },
+    { prompt: "9. 我对无关紧要的事忧虑过多", name: 'STAI_T_9' },
+    { prompt: "10. 我很幸福", name: 'STAI_T_10' },
+    { prompt: "11. 我遇事容易往坏处想", name: 'STAI_T_11' },
+    { prompt: "12. 我缺乏自信心", name: 'STAI_T_12' },
+    { prompt: "13. 我感到安全", name: 'STAI_T_13' },
+    { prompt: "14. 我尽量避免面对危机和困难", name: 'STAI_T_14' },
+    { prompt: "15. 我感到忧郁", name: 'STAI_T_15' },
+    { prompt: "16. 我满意", name: 'STAI_T_16' },
+    { prompt: "17. 一些无关紧要的想法使我苦恼", name: 'STAI_T_17' },
+    { prompt: "18. 我把失望看得很重，不能从记忆中忘掉", name: 'STAI_T_18' },
+    { prompt: "19. 我是一个稳重的人", name: 'STAI_T_19' },
+    { prompt: "20. 当我想到最近的事和将要做的事时就会紧张和不安", name: 'STAI_T_20' }
+]
+
+const STAI_options = [
+    "1 - 几乎没有",
+    "2 - 有些",
+    "3 - 经常如此",
+    "4 - 几乎总是如此"
+]
+
+/* 创建题目 */
+function createQuestionBlock(question, options, scale_name, current, total) {
+    return {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            let html = `<div class="scale-question">
+                <div class="progress-bar">问题 ${current} / ${total}</div>
+                <div class="question-text">${question.prompt}</div>
+                <div class="option-container">`
+            
+            for (let i = 0; i < options.length; i++) {
+                html += `<label class="option-label" data-choice="${i}">
+                    <input type="radio" name="${question.name}" value="${i}" required>
+                    <span>${options[i]}</span>
+                </label>`
+            }
+            
+            html += `</div></div>`
+            return html
+        },
+        choices: ['下一题'],
+        on_load: function() {
+            let button = document.querySelector('.jspsych-btn')
+            button.disabled = true
+            
+            let labels = document.querySelectorAll('.option-label')
+            
+            labels.forEach(function(label) {
+                label.addEventListener('click', function() {
+                    labels.forEach(l => l.classList.remove('selected'))
+                    label.classList.add('selected')
+                    button.disabled = false
+                })
+            })
+        },
+        on_finish: function(data) {
+            let selected = document.querySelector('input[name="' + question.name + '"]:checked')
+            if (selected) {
+                data.question = question.prompt
+                data.response = parseInt(selected.value)
+                data.scale = scale_name
+                data.item = question.name
+                data.participant_id = subID
+            }
+        }
+    }
+}
+
+/* 初始化 jsPsych */
+const jsPsych = initJsPsych({
+    on_finish: function() {
+        jsPsych.data.get().localSave('csv', `data_scales_${subID}_${new Date().toISOString().slice(0,10)}.csv`)
+    }
+})
+
+/* 欢迎页面 */
+var welcome = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div style="text-align: left; max-width: 800px; margin: auto;">
+    <h1 style="text-align: center; color: #2c3e50;">欢迎参加心理量表测评</h1>
+    <div style="background-color: #e8f4f8; padding: 20px; border-radius: 10px; margin: 20px 0;">
+    <p style="font-size: 18pt; line-height: 1.8em;">
+    <b>本测验包含三个部分：</b><br/>
+    📋 <b>贝克抑郁量表（BDI-II）</b> - 21题<br/>
+    📋 <b>状态焦虑量表（STAI-S）</b> - 20题<br/>
+    📋 <b>特质焦虑量表（STAI-T）</b> - 20题<br/>
+    </p>
+    </div>
+    <p style="font-size: 16pt; line-height: 1.8em;">
+    ⏱️ 完成全部测验大约需要 <b>15-20 分钟</b><br/>
+    🔒 请根据您的真实感受如实回答，所有信息将严格保密<br/>
+    <br/>
+    <b style="color: #e74c3c;">⚠️ 注意事项：</b><br/>
+    • 请在安静的环境中完成测验<br/>
+    • 请认真阅读每个题目<br/>
+    • 没有对错之分，请根据第一感觉作答<br/>
+    • 请勿中途退出，以免影响结果准确性
+    </p>
+    </div>`,
+    choices: ['开始测验'],
+    on_start: set_html_style,
+    on_finish: function(data) {
+        data.participant_id = subID
+        data.start_time = startTime
+        data.user_agent = navigator.userAgent
+    }
+}
+
+/* BDI 指导语 */
+var BDI_instruction = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="scale-question">
+    <div class="scale-title">📋 贝克抑郁量表（BDI-II）</div>
+    <div class="scale-instruction">
+    <b>指导语：</b><br/>
+    这个问卷包含21组描述。请仔细阅读每一组描述，<br/>
+    然后从每组的4个选项中选出<b style="color: #e74c3c;">最能描述您过去两周（包括今天）感受</b>的一项。<br/>
+    <br/>
+    ⚠️ 请确保您阅读了每组中的所有选项，然后再做出选择。
+    </div>
+    </div>`,
+    choices: ['开始回答']
+}
+
+/* STAI-S 指导语 */
+var STAI_S_instruction = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="scale-question">
+    <div class="scale-title">📋 状态焦虑量表（STAI-S）</div>
+    <div class="scale-instruction">
+    <b>指导语：</b><br/>
+    请根据您<b style="color: #e74c3c;">此时此刻</b>的感受，选择最符合的选项。<br/>
+    <br/>
+    <b>选项说明：</b><br/>
+    1️⃣ 几乎没有<br/>
+    2️⃣ 有些<br/>
+    3️⃣ 经常如此<br/>
+    4️⃣ 几乎总是如此
+    </div>
+    </div>`,
+    choices: ['开始回答']
+}
+
+/* STAI-T 指导语 */
+var STAI_T_instruction = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="scale-question">
+    <div class="scale-title">📋 特质焦虑量表（STAI-T）</div>
+    <div class="scale-instruction">
+    <b>指导语：</b><br/>
+    请根据您<b style="color: #e74c3c;">一般情况下</b>的感受，选择最符合的选项。<br/>
+    <br/>
+    <b>选项说明：</b><br/>
+    1️⃣ 几乎没有<br/>
+    2️⃣ 有些<br/>
+    3️⃣ 经常如此<br/>
+    4️⃣ 几乎总是如此
+    </div>
+    </div>`,
+    choices: ['开始回答']
+}
+
+/* 计算分数并显示结果 */
+var calculate_scores = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+        var data = jsPsych.data.get()
+        
+        // 计算 BDI 总分
+        var bdi_data = data.filter({scale: 'BDI'})
+        var bdi_score = 0
+        bdi_data.values().forEach(function(trial) {
+            if (trial.response !== undefined) {
+                bdi_score += trial.response
+            }
+        })
+        
+        // 计算 STAI-S 总分
+        var stai_s_data = data.filter({scale: 'STAI_S'})
+        var stai_s_score = 0
+        stai_s_data.values().forEach(function(trial) {
+            if (trial.response !== undefined) {
+                stai_s_score += (trial.response + 1)
+            }
+        })
+        
+        // 计算 STAI-T 总分
+        var stai_t_data = data.filter({scale: 'STAI_T'})
+        var stai_t_score = 0
+        stai_t_data.values().forEach(function(trial) {
+            if (trial.response !== undefined) {
+                stai_t_score += (trial.response + 1)
+            }
+        })
+        
+        // BDI 解释
+        var bdi_level = ''
+        var bdi_class = ''
+        if (bdi_score <= 13) {
+            bdi_level = '✅ 正常范围'
+            bdi_class = 'normal'
+        } else if (bdi_score <= 19) {
+            bdi_level = '⚠️ 轻度抑郁'
+            bdi_class = 'mild'
+        } else if (bdi_score <= 28) {
+            bdi_level = '⚠️ 中度抑郁'
+            bdi_class = 'moderate'
+        } else {
+            bdi_level = '🚨 重度抑郁'
+            bdi_class = 'severe'
+        }
+        
+        // STAI-S 解释
+        var stai_s_level = ''
+        var stai_s_class = ''
+        if (stai_s_score < 40) {
+            stai_s_level = '✅ 低焦虑'
+            stai_s_class = 'normal'
+        } else if (stai_s_score <= 60) {
+            stai_s_level = '⚠️ 中等焦虑'
+            stai_s_class = 'mild'
+        } else {
+            stai_s_level = '🚨 高焦虑'
+            stai_s_class = 'severe'
+        }
+        
+        // STAI-T 解释
+        var stai_t_level = ''
+        var stai_t_class = ''
+        if (stai_t_score < 40) {
+            stai_t_level = '✅ 低焦虑'
+            stai_t_class = 'normal'
+        } else if (stai_t_score <= 60) {
+            stai_t_level = '⚠️ 中等焦虑'
+            stai_t_class = 'mild'
+        } else {
+            stai_t_level = '🚨 高焦虑'
+            stai_t_class = 'severe'
+        }
+        
+        return `
+        <div style="max-width: 900px; margin: auto; text-align: left;">
+        <h1 style="text-align: center; color: #2c3e50;">📊 测评结果报告</h1>
+        <p style="text-align: center; color: #7f8c8d; font-size: 14pt;">
+        测试编号: ${subID} | 完成时间: ${new Date().toLocaleString('zh-CN')}
+        </p>
+        
+        <div class="result-box">
+        <h2 style="color: #e74c3c;">📋 贝克抑郁量表（BDI-II）</h2>
+        <div class="score-display" style="color: #e74c3c;">得分: ${bdi_score} 分</div>
+        <div class="interpretation ${bdi_class}">${bdi_level}</div>
+        <p style="font-size: 14pt; color: #7f8c8d;">
+        参考标准: 0-13分(正常) | 14-19分(轻度) | 20-28分(中度) | 29-63分(重度)
+        </p>
+        </div>
+        
+        <div class="result-box">
+        <h2 style="color: #3498db;">📋 状态焦虑量表（STAI-S）</h2>
+        <div class="score-display" style="color: #3498db;">得分: ${stai_s_score} 分</div>
+        <div class="interpretation ${stai_s_class}">${stai_s_level}</div>
+        <p style="font-size: 14pt; color: #7f8c8d;">
+        参考标准: 20-39分(低焦虑) | 40-60分(中等焦虑) | 61-80分(高焦虑)
+        </p>
+        </div>
+        
+        <div class="result-box">
+        <h2 style="color: #9b59b6;">📋 特质焦虑量表（STAI-T）</h2>
+        <div class="score-display" style="color: #9b59b6;">得分: ${stai_t_score} 分</div>
+        <div class="interpretation ${stai_t_class}">${stai_t_level}</div>
+        <p style="font-size: 14pt; color: #7f8c8d;">
+        参考标准: 20-39分(低焦虑) | 40-60分(中等焦虑) | 61-80分(高焦虑)
+        </p>
+        </div>
+        
+        <div class="warning-box">
+        <p style="font-size: 16pt; margin: 0;">
+        <b>⚠️ 重要提示：</b><br/>
+        本测评结果仅供参考，不能作为临床诊断依据。<br/>
+        如果您感到困扰或结果显示较高水平，建议及时寻求专业心理咨询师或精神科医生的帮助。
+        </p>
+        </div>
+        
+        <p style="text-align: center; font-size: 14pt; color: #7f8c8d; margin-top: 30px;">
+        按任意键下载详细数据文件
+        </p>
+        </div>`
+    },
+    on_finish: function(data) {
+        data.varname = 'final_scores'
+        data.participant_id = subID
+        data.end_time = new Date().toISOString()
+    }
+}
+
+/* 结束页面 */
+var thank_you = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div style="text-align: center;">
+    <h1 style="color: #27ae60;">✅ 感谢您的参与！</h1>
+    <p style="font-size: 20pt;">测评已完成，数据已自动保存</p>
+    <p style="font-size: 16pt; color: #7f8c8d;">
+    您可以关闭此页面<br/>
+    如需帮助，请联系测评管理员
+    </p>
+    <p style="font-size: 14pt; color: #95a5a6; margin-top: 50px;">按任意键结束</p>
+    </div>`,
+    on_finish: function() {
+        document.body.style.cursor = 'default'
+    }
+}
+
+/* 构建时间线 */
+var timeline = [welcome]
+
+// BDI 部分
+timeline.push(BDI_instruction)
+for (let i = 0; i < BDI_questions.length; i++) {
+    timeline.push(createQuestionBlock(
+        BDI_questions[i], 
+        BDI_questions[i].options, 
+        'BDI',
+        i + 1,
+        BDI_questions.length
+    ))
+}
+
+// STAI-S 部分
+timeline.push(STAI_S_instruction)
+for (let i = 0; i < STAI_S_questions.length; i++) {
+    timeline.push(createQuestionBlock(
+        STAI_S_questions[i], 
+        STAI_options, 
+        'STAI_S',
+        i + 1,
+        STAI_S_questions.length
+    ))
+}
+
+// STAI-T 部分
+timeline.push(STAI_T_instruction)
+for (let i = 0; i < STAI_T_questions.length; i++) {
+    timeline.push(createQuestionBlock(
+        STAI_T_questions[i], 
+        STAI_options, 
+        'STAI_T',
+        i + 1,
+        STAI_T_questions.length
+    ))
+}
+
+timeline.push(calculate_scores)
+timeline.push(thank_you)
+
+/* 运行实验 */
+jsPsych.run(timeline)
+
+</script>
+
+</html>

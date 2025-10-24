@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>选择性注意任务</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            background-color: #000;
+            cursor: default;
+        }
+        
+        body.hide-cursor {
+            cursor: none;
+        }
+        
+        .experiment-container {
+            width: 1920px;
+            height: 1080px;
+            margin: 0 auto;
+            position: relative;
+            background-color: #000;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body></body>
+<script>
+    // 实验参数
+    const PARAMS = {
+        RESOLUTION_X: 1920,
+        RESOLUTION_Y: 1080,
+        CUE_LUMINANCE: 128,
+        TEST_LUMINANCE: 128,
+        NUM_FIGURE: 2, // 改为2，表示2x2=4个斜线
+        NUM_GROUND_X: 19,
+        NUM_GROUND_Y: 29,
+        VISUAL_ANGLE: 32,
+        BAR_Y: Math.round(0.62 * 32), // 20 pixels
+        BAR_X: Math.round(0.62 * 32 / 10), // 2 pixels
+        BAR_SIZE: Math.round(0.66 * 32 * Math.sqrt(2)), // 30 pixels
+        TRIAL_NUM: 96 * 2, // 192 trials
+        REST_TRIAL: 96,
+        CUE_DURATION: 100,
+        TARGET_DURATION: 100,
+        RESPONSE_DEADLINE: 2000,
+        ITI_DURATION: 1000 // 固定1秒
+    };
+    
+    PARAMS.TEST_SIZE = PARAMS.BAR_SIZE * 1.5; // 45 pixels
+    PARAMS.GROUND_SIZE_X = PARAMS.BAR_SIZE * PARAMS.NUM_GROUND_X + PARAMS.BAR_SIZE;
+    PARAMS.GROUND_SIZE_Y = PARAMS.BAR_SIZE * PARAMS.NUM_GROUND_Y + PARAMS.BAR_SIZE;
+    
+    // 角度差异条件
+    const ANGLE_DIFFS = [0, 18, 36, 54, 72, 90]; // 6种条件
+    
+    // 存储实验数据
+    let experimentData = {
+        subjectID: '',
+        runNum: 1,
+        visualField: 1, // 固定为下视野
+        allResults: []
+    };
+    
+    // 初始化jsPsych
+    const jsPsych = initJsPsych({
+        on_finish: function() {
+            displayResults();
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+            document.body.classList.remove('hide-cursor');
+        }
+    });
+    
+    let timeline = [];
+    
+    // 全屏提示
+    const enterFullscreen = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:24px; line-height:2; color:white;">
+            <p style="font-size:32px; font-weight:bold;">选择性注意任务</p>
+            <p style="margin-top:40px;">实验需要在全屏模式下进行</p>
+            <p style="margin-top:30px; color:#FF5722;">
+                <strong>按任意键进入全屏并开始实验</strong>
+            </p>
+        </div>
+        `,
+        on_finish: function() {
+            const element = document.documentElement;
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            }
+        }
+    };
+    timeline.push(enterFullscreen);
+    
+    // 被试信息收集
+    const subjectInfo = {
+        type: jsPsychSurveyText,
+        questions: [
+            {prompt: '<span style="color: white;">被试姓名:</span>', name: 'name', required: true},
+            {prompt: '<span style="color: white;">Run编号:</span>', name: 'run_num', required: true}
+        ],
+        button_label: '开始实验',
+        on_finish: function(data) {
+            experimentData.subjectID = data.response.name;
+            experimentData.runNum = parseInt(data.response.run_num);
+            experimentData.visualField = 1; // 固定为下视野
+            
+            jsPsych.data.addProperties({
+                subject_id: experimentData.subjectID,
+                run_num: experimentData.runNum,
+                visual_field: experimentData.visualField
+            });
+        }
+    };
+    timeline.push(subjectInfo);
+    
+    // 指导语
+    const instructions = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:22px; line-height:2; color:white;">
+            <p style="font-size:28px; font-weight:bold;">实验说明</p>
+            <p style="margin-top:30px;">在本实验中，您将看到一个光栅背景</p>
+            <p>注视屏幕中心的白点</p>
+            <p>在左侧或右侧会短暂出现一个椭圆形目标</p>
+            <p style="margin-top:30px; color:#FFD700;">操作说明：</p>
+            <p style="font-size:24px; margin-top:20px;">
+                椭圆<strong style="color:#4CAF50;">长轴向左</strong> → 按 <strong>N</strong> 键<br>
+                椭圆<strong style="color:#2196F3;">长轴向右</strong> → 按 <strong>M</strong> 键
+            </p>
+            <p style="margin-top:40px; color:#FF9800;">
+                请尽可能<strong>快速且准确</strong>地判断椭圆的朝向
+            </p>
+            <p style="margin-top:50px; font-size:20px;">
+                按 <strong>S</strong> 键开始实验
+            </p>
+        </div>
+        `,
+        choices: ['s'],
+        on_finish: function() {
+            document.body.classList.add('hide-cursor');
+        }
+    };
+    timeline.push(instructions);
+    
+    // 等待触发
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+        <div style="text-align:center; font-size:28px; color:#FFD700;">
+            <p>Waiting for the trigger to start...</p>
+        </div>
+        `,
+        choices: ['s']
+    });
+    
+    // 初始注视 (4秒)
+    timeline.push({
+        type: jsPsychCanvasKeyboardResponse,
+        stimulus: function(c) {
+            drawFixation(c);
+        },
+        canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+        choices: "NO_KEYS",
+        trial_duration: 4000
+    });
+    
+    // 生成试次条件
+    function generateTrialConditions() {
+        const conditions = [];
+        const trialsPerCondition = PARAMS.TRIAL_NUM / 12;
+        
+        // 12种条件：6种角度差 × 2个方向（左valid/右invalid, 右valid/左invalid）
+        for (let angleIdx = 0; angleIdx < 6; angleIdx++) {
+            for (let direction = 0; direction < 2; direction++) {
+                for (let i = 0; i < trialsPerCondition; i++) {
+                    conditions.push({
+                        angleDiff: ANGLE_DIFFS[angleIdx],
+                        angleIndex: angleIdx,
+                        validSide: direction === 0 ? 'left' : 'right' // 线索在哪边就是valid
+                    });
+                }
+            }
+        }
+        
+        return shuffleArray(conditions);
+    }
+    
+    const trialConditions = generateTrialConditions();
+    
+    // 绘制注视点
+    function drawFixation(canvas) {
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制白色注视点
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    
+    // 绘制光栅背景
+    function drawGratingBackground(canvas, baseAngle, leftAngle, rightAngle) {
+        const ctx = canvas.getContext('2d');
+        const barSize = PARAMS.BAR_SIZE;
+        const barY = PARAMS.BAR_Y;
+        const barX = PARAMS.BAR_X;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 固定为下视野
+        const totalRows = PARAMS.NUM_GROUND_X; // 19行
+        const centerRow = Math.floor((totalRows - 1) / 2); // 第9行
+        const vfStartRow = centerRow; // 从中心行开始
+        const vfEndRow = totalRows - 1; // 到最下面
+        const targetRowPosition = 14; // 目标在下视野的位置
+        
+        const llXEccen = 10; // 左侧线索列位置
+        const lrXEccen = 19; // 右侧线索列位置
+        const lYEccen = targetRowPosition; // 线索行位置
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // 计算绘制区域的偏移
+        const totalWidth = PARAMS.NUM_GROUND_Y * barSize;
+        const totalHeight = totalRows * barSize;
+        const offsetX = centerX - totalWidth / 2;
+        const offsetY = centerY - totalHeight / 2;
+        
+        // 绘制背景光栅 - 只在下视野范围内
+        ctx.fillStyle = `rgb(${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE})`;
+        
+        for (let row = vfStartRow; row <= vfEndRow; row++) {
+            for (let col = 0; col < PARAMS.NUM_GROUND_Y; col++) {
+                // 跳过中心注视点位置
+                if (row === centerRow && col === Math.floor((PARAMS.NUM_GROUND_Y - 1) / 2)) {
+                    continue;
+                }
+                
+                // 跳过左侧线索区域
+                let skipLeft = false;
+                if (leftAngle !== null) {
+                    for (let rowOffset = 0; rowOffset < PARAMS.NUM_FIGURE; rowOffset++) {
+                        for (let colOffset = 0; colOffset < PARAMS.NUM_FIGURE; colOffset++) {
+                            if (row === lYEccen + rowOffset && col === llXEccen + colOffset) {
+                                skipLeft = true;
+                            }
+                        }
+                    }
+                }
+                
+                // 跳过右侧线索区域
+                let skipRight = false;
+                if (rightAngle !== null) {
+                    for (let rowOffset = 0; rowOffset < PARAMS.NUM_FIGURE; rowOffset++) {
+                        for (let colOffset = 0; colOffset < PARAMS.NUM_FIGURE; colOffset++) {
+                            if (row === lYEccen + rowOffset && col === lrXEccen + colOffset) {
+                                skipRight = true;
+                            }
+                        }
+                    }
+                }
+                
+                if (skipLeft || skipRight) {
+                    continue;
+                }
+                
+                const x = offsetX + col * barSize + barSize / 2;
+                const y = offsetY + row * barSize + barSize / 2;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate((baseAngle * Math.PI) / 180);
+                ctx.fillRect(-barX / 2, -barY / 2, barX, barY);
+                ctx.restore();
+            }
+        }
+        
+        // 先用黑色矩形覆盖左侧线索区域（清除原背景）
+        if (leftAngle !== null) {
+            ctx.fillStyle = '#000';
+            const leftX = offsetX + llXEccen * barSize;
+            const leftY = offsetY + lYEccen * barSize;
+            const cueWidth = PARAMS.NUM_FIGURE * barSize;
+            const cueHeight = PARAMS.NUM_FIGURE * barSize;
+            ctx.fillRect(leftX, leftY, cueWidth, cueHeight);
+            
+            // 绘制左侧线索（2x2=4个斜线）
+            ctx.fillStyle = `rgb(${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE})`;
+            for (let rowOffset = 0; rowOffset < PARAMS.NUM_FIGURE; rowOffset++) {
+                for (let colOffset = 0; colOffset < PARAMS.NUM_FIGURE; colOffset++) {
+                    const x = offsetX + (llXEccen + colOffset) * barSize + barSize / 2;
+                    const y = offsetY + (lYEccen + rowOffset) * barSize + barSize / 2;
+                    
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate((leftAngle * Math.PI) / 180);
+                    ctx.fillRect(-barX / 2, -barY / 2, barX, barY);
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // 先用黑色矩形覆盖右侧线索区域（清除原背景）
+        if (rightAngle !== null) {
+            ctx.fillStyle = '#000';
+            const rightX = offsetX + lrXEccen * barSize;
+            const rightY = offsetY + lYEccen * barSize;
+            const cueWidth = PARAMS.NUM_FIGURE * barSize;
+            const cueHeight = PARAMS.NUM_FIGURE * barSize;
+            ctx.fillRect(rightX, rightY, cueWidth, cueHeight);
+            
+            // 绘制右侧线索（2x2=4个斜线）
+            ctx.fillStyle = `rgb(${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE}, ${PARAMS.CUE_LUMINANCE})`;
+            for (let rowOffset = 0; rowOffset < PARAMS.NUM_FIGURE; rowOffset++) {
+                for (let colOffset = 0; colOffset < PARAMS.NUM_FIGURE; colOffset++) {
+                    const x = offsetX + (lrXEccen + colOffset) * barSize + barSize / 2;
+                    const y = offsetY + (lYEccen + rowOffset) * barSize + barSize / 2;
+                    
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate((rightAngle * Math.PI) / 180);
+                    ctx.fillRect(-barX / 2, -barY / 2, barX, barY);
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // 绘制注视点（始终在屏幕正中央）
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // 保存位置信息供绘制目标时使用
+        return {
+            offsetX: offsetX,
+            offsetY: offsetY,
+            targetRow: lYEccen,
+            leftCol: llXEccen,
+            rightCol: lrXEccen
+        };
+    }
+    
+    // 绘制目标椭圆
+    function drawTarget(canvas, targetSide, targetOrientation) {
+        const ctx = canvas.getContext('2d');
+        const testSize = PARAMS.TEST_SIZE;
+        const barSize = PARAMS.BAR_SIZE;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 固定为下视野
+        const targetRowPosition = 14;
+        const llXEccen = 10; // 左侧位置
+        const lrXEccen = 19; // 右侧位置
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // 计算偏移（与背景绘制保持一致）
+        const totalRows = PARAMS.NUM_GROUND_X;
+        const totalWidth = PARAMS.NUM_GROUND_Y * barSize;
+        const totalHeight = totalRows * barSize;
+        const offsetX = centerX - totalWidth / 2;
+        const offsetY = centerY - totalHeight / 2;
+        
+        // 计算目标位置
+        let targetX, targetY;
+        if (targetSide === 'left') {
+            targetX = offsetX + (llXEccen - 0.25) * barSize + testSize / 2;
+            targetY = offsetY + (targetRowPosition - 0.25) * barSize + testSize / 2;
+        } else {
+            targetX = offsetX + (lrXEccen - 0.25) * barSize + testSize / 2;
+            targetY = offsetY + (targetRowPosition - 0.25) * barSize + testSize / 2;
+        }
+        
+        // 绘制注视点
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // 绘制椭圆
+        ctx.strokeStyle = `rgb(${PARAMS.TEST_LUMINANCE}, ${PARAMS.TEST_LUMINANCE}, 0)`;
+        ctx.lineWidth = 3;
+        
+        ctx.save();
+        ctx.translate(targetX, targetY);
+        
+        // 根据朝向旋转
+        if (targetOrientation === 'left') {
+            // 左倾斜椭圆 (长轴向左上-右下)
+            ctx.rotate((45 * Math.PI) / 180);
+        } else {
+            // 右倾斜椭圆 (长轴向右上-左下)
+            ctx.rotate((-45 * Math.PI) / 180);
+        }
+        
+        ctx.beginPath();
+        ctx.ellipse(0, 0, testSize / 2, testSize / 3, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+    }
+    
+    // 存储当前试次的目标信息
+    let currentTrialData = {};
+    
+    // 创建单个试次
+    function createTrial(trialNum, condition) {
+        let trial_timeline = [];
+        
+        // 随机生成基础角度
+        const baseAngle = Math.floor(Math.random() * 180);
+        
+        // 确定线索角度
+        let leftCueAngle, rightCueAngle;
+        if (condition.angleDiff === 0) {
+            // 一侧有90度差，另一侧无线索
+            if (condition.validSide === 'left') {
+                leftCueAngle = baseAngle + 90;
+                rightCueAngle = null;
+            } else {
+                leftCueAngle = null;
+                rightCueAngle = baseAngle + 90;
+            }
+        } else {
+            // 两侧都有线索，但角度不同
+            if (condition.validSide === 'left') {
+                leftCueAngle = baseAngle + 90;
+                rightCueAngle = baseAngle + condition.angleDiff;
+            } else {
+                leftCueAngle = baseAngle + condition.angleDiff;
+                rightCueAngle = baseAngle + 90;
+            }
+        }
+        
+        // 随机确定目标位置和朝向
+        const targetSide = Math.random() < 0.5 ? 'left' : 'right';
+        const targetOrientation = Math.random() < 0.5 ? 'left' : 'right';
+        
+        // 判断是否为valid试次
+        const isValid = targetSide === condition.validSide;
+        
+        // 存储当前试次信息
+        currentTrialData[trialNum] = {
+            angleDiff: condition.angleDiff,
+            validSide: condition.validSide,
+            targetSide: targetSide,
+            targetOrientation: targetOrientation,
+            isValid: isValid
+        };
+        
+        // 1. 线索呈现 (100ms)
+        trial_timeline.push({
+            type: jsPsychCanvasKeyboardResponse,
+            stimulus: function(c) {
+                drawGratingBackground(c, baseAngle, leftCueAngle, rightCueAngle);
+            },
+            canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+            choices: "NO_KEYS",
+            trial_duration: PARAMS.CUE_DURATION,
+            data: {
+                trial_type: 'cue',
+                trial_number: trialNum
+            }
+        });
+        
+        // 2. 注视点 (100ms)
+        trial_timeline.push({
+            type: jsPsychCanvasKeyboardResponse,
+            stimulus: function(c) {
+                drawFixation(c);
+            },
+            canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+            choices: "NO_KEYS",
+            trial_duration: 100
+        });
+        
+        // 3. 目标呈现 (100ms)
+        trial_timeline.push({
+            type: jsPsychCanvasKeyboardResponse,
+            stimulus: function(c) {
+                drawTarget(c, targetSide, targetOrientation);
+            },
+            canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+            choices: "NO_KEYS",
+            trial_duration: PARAMS.TARGET_DURATION
+        });
+        
+        // 4. 反应收集 (2000ms)
+        trial_timeline.push({
+            type: jsPsychCanvasKeyboardResponse,
+            stimulus: function(c) {
+                drawFixation(c);
+            },
+            canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+            choices: ['n', 'm'],
+            trial_duration: PARAMS.RESPONSE_DEADLINE,
+            data: {
+                trial_type: 'response',
+                trial_number: trialNum
+            },
+            on_finish: function(data) {
+                // 从存储中获取目标信息
+                const targetData = currentTrialData[trialNum];
+                
+                if (!targetData) {
+                    console.error(`找不到试次${trialNum}的目标数据`);
+                    return;
+                }
+                
+                // 记录反应
+                if (data.response) {
+                    data.response_code = data.response === 'n' ? 1 : 2; // 1=left, 2=right
+                } else {
+                    data.response_code = 0;
+                }
+                
+                // 判断正确性
+                const correctResponse = targetData.targetOrientation === 'left' ? 1 : 2;
+                data.correct = data.response_code === correctResponse;
+                
+                // 复制目标数据
+                data.angle_diff = targetData.angleDiff;
+                data.valid_side = targetData.validSide;
+                data.target_side = targetData.targetSide;
+                data.target_orientation = targetData.targetOrientation;
+                data.is_valid = targetData.isValid;
+                
+                console.log(`试次${trialNum}: 角度差=${data.angle_diff}, Valid=${data.is_valid}, 正确=${data.correct}, RT=${data.rt}ms`);
+            }
+        });
+        
+        // 5. ITI (1000ms 固定)
+        trial_timeline.push({
+            type: jsPsychCanvasKeyboardResponse,
+            stimulus: function(c) {
+                drawFixation(c);
+            },
+            canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+            choices: "NO_KEYS",
+            trial_duration: PARAMS.ITI_DURATION
+        });
+        
+        return {
+            timeline: trial_timeline
+        };
+    }
+    
+    // 添加所有试次
+    for (let trial = 1; trial <= PARAMS.TRIAL_NUM; trial++) {
+        timeline.push(createTrial(trial, trialConditions[trial - 1]));
+        
+        // 每96个试次休息一次
+        if (trial % PARAMS.REST_TRIAL === 0 && trial !== PARAMS.TRIAL_NUM) {
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                <div style="text-align:center; font-size:24px; color:white; line-height:2;">
+                    <p style="font-size:28px;">请稍事休息</p>
+                    <p style="margin-top:30px;">已完成 ${trial} / ${PARAMS.TRIAL_NUM} 试次</p>
+                    <p style="margin-top:30px; color:#FFD700;">
+                        请闭眼休息片刻<br>
+                        准备好后按 <strong>S</strong> 键继续
+                    </p>
+                </div>
+                `,
+                choices: ['s']
+            });
+            
+            // 休息后的注视 (4秒)
+            timeline.push({
+                type: jsPsychCanvasKeyboardResponse,
+                stimulus: function(c) {
+                    drawFixation(c);
+                },
+                canvas_size: [PARAMS.RESOLUTION_X, PARAMS.RESOLUTION_Y],
+                choices: "NO_KEYS",
+                trial_duration: 4000
+            });
+        }
+    }
+    
+    // 结束页面
+    const debrief = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+            const responseTrials = jsPsych.data.get().filter({trial_type: 'response'});
+            const correctTrials = responseTrials.filter({correct: true});
+            const accuracy = responseTrials.count() > 0 ?
+                Math.round(correctTrials.count() / responseTrials.count() * 100) : 0;
+            const avgRT = correctTrials.count() > 0 ?
+                Math.round(correctTrials.select('rt').mean()) : 0;
+            
+            return `
+            <div style="font-size:24px; text-align:center; line-height:2; color:white;">
+                <p style="font-size:32px; font-weight:bold; color:#4CAF50;">实验结束，感谢参与!</p>
+                <p style="margin-top:40px; border-top:2px solid #ddd; padding-top:20px;">
+                    <strong>实验结果:</strong>
+                </p>
+                <p>完成试次: <strong style="color:#2196F3;">${responseTrials.count()}</strong></p>
+                <p>总正确率: <strong style="color:#4CAF50;">${accuracy}%</strong></p>
+                <p>平均反应时: <strong style="color:#2196F3;">${avgRT} ms</strong></p>
+                <p style="margin-top:50px; font-size:20px; color:#FF5722;">
+                    按<strong>空格键</strong>查看详细结果并下载数据
+                </p>
+            </div>
+            `;
+        },
+        choices: [' ']
+    };
+    timeline.push(debrief);
+    
+    // 随机打乱函数
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+    
+    // 显示并保存结果
+    function displayResults() {
+        const allData = jsPsych.data.get();
+        const responseTrials = allData.filter({trial_type: 'response'});
+        const correctTrials = responseTrials.filter({correct: true});
+        
+        console.log('=== 实验数据汇总 ===');
+        console.log('被试ID:', experimentData.subjectID);
+        console.log('Run编号:', experimentData.runNum);
+        console.log('视野: 下视野');
+        console.log('总试次数:', responseTrials.count());
+        console.log('正确试次数:', correctTrials.count());
+        console.log('总正确率:', (correctTrials.count() / responseTrials.count() * 100).toFixed(2) + '%');
+        console.log('平均反应时:', correctTrials.select('rt').mean().toFixed(2) + ' ms');
+        
+        // 按条件分析
+        console.log('\n=== 按角度差和有效性分析 ===');
+        ANGLE_DIFFS.forEach(angleDiff => {
+            const validTrials = correctTrials.filter({angle_diff: angleDiff, is_valid: true});
+            const invalidTrials = correctTrials.filter({angle_diff: angleDiff, is_valid: false});
+            
+            const validRT = validTrials.count() > 0 ? validTrials.select('rt').mean().toFixed(2) : 'N/A';
+            const invalidRT = invalidTrials.count() > 0 ? invalidTrials.select('rt').mean().toFixed(2) : 'N/A';
+            const rtDiff = (validTrials.count() > 0 && invalidTrials.count() > 0) ?
+                (invalidRT - validRT).toFixed(2) : 'N/A';
+            
+            console.log(`角度差 ${angleDiff}°:`);
+            console.log(`  Valid RT: ${validRT}ms (N=${validTrials.count()})`);
+            console.log(`  Invalid RT: ${invalidRT}ms (N=${invalidTrials.count()})`);
+            console.log(`  RT差异: ${rtDiff}ms`);
+        });
+        
+        // 准备CSV数据
+        const trialsData = responseTrials.values().map(trial => ({
+            trial_number: trial.trial_number,
+            angle_diff: trial.angle_diff,
+            valid_side: trial.valid_side,
+            target_side: trial.target_side,
+            target_orientation: trial.target_orientation,
+            is_valid: trial.is_valid ? 1 : 0,
+            response_code: trial.response_code,
+            correct: trial.correct ? 1 : 0,
+            rt: trial.rt || ''
+        }));
+        
+        // 保存CSV
+        const csvContent = convertToCSV(trialsData);
+        const filename = `SelectiveAttention_${experimentData.subjectID}_Run${experimentData.runNum}_Lower.csv`;
+        downloadCSV(csvContent, filename);
+        
+        console.log('\n数据已保存为:', filename);
+    }
+    
+    // CSV转换
+    function convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        let csv = headers.join(',') + '\n';
+        
+        data.forEach(row => {
+            const values = headers.map(header => {
+                const value = row[header];
+                if (value === null || value === undefined || value === '') return '';
+                if (String(value).includes(',')) return `"${value}"`;
+                return value;
+            });
+            csv += values.join(',') + '\n';
+        });
+        
+        return csv;
+    }
+    
+    // CSV下载
+    function downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // 运行实验
+    jsPsych.run(timeline);
+</script>
+</html>
