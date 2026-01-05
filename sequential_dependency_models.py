@@ -9,6 +9,7 @@ dependency effects in the Ultimatum Game:
 Hypothesis 1: Decisions depend only on the current amount (Threshold Model)
 Hypothesis 2: Decisions depend on both previous and current amounts (Linear/Bayesian Models)
 Hypothesis 2+: Decisions follow RL reward-punishment framework with Bayesian updating
+Hypothesis 2++: Formal Bayesian utility model with power functions and proper priors
 Hypothesis 3: Decisions depend on current/previous amounts AND previous decisions (HMM)
 
 Models implemented:
@@ -20,7 +21,12 @@ Models implemented:
    - Accepting incurs punishment (fairness violation)
    - Punishment decreases as offer amount increases
    - Combined with Bayesian belief updating
-5. Hidden Markov Model (HMM) - State-based decision model with decision history influence
+5. Bayesian Utility Model - Formal Bayesian framework with:
+   - Power utility functions: u(r) = r^α, v(c) = λ*c^β
+   - Proper prior distributions on all parameters
+   - Risk attitude (α) and loss aversion (λ) interpretation
+   - MAP or MLE estimation
+6. Hidden Markov Model (HMM) - State-based decision model with decision history influence
 
 Author: Sequential Dependency Analysis
 Date: 2026-01-05
@@ -735,7 +741,431 @@ class ReinforcementLearningBayesianModel:
 
 
 # ============================================================================
-# Model 5: Hidden Markov Model (Hypothesis 3)
+# Model 5: Bayesian Utility Model (Formal Bayesian Framework)
+# Value-Risk Tradeoff with Power Utility Functions and Proper Priors
+# ============================================================================
+
+class BayesianUtilityModel:
+    """
+    Formal Bayesian Utility Model for accept/reject decisions.
+    
+    This model implements a complete Bayesian framework for value-risk tradeoff
+    decisions in the Ultimatum Game, following the formal specification:
+    
+    Net Value Calculation:
+        V(r) = u(r) - v(c(r))
+        where:
+            u(r) = r^α          (power utility for reward, α = reward sensitivity)
+            v(c) = λ * c^β      (power disutility for punishment)
+            c(r) = c0 * exp(-γ*r)  (punishment decreases with offer)
+    
+    Choice Probability (Logistic):
+        P(accept | r) = 1 / (1 + exp(-(V(r) - θ) / σ))
+        where:
+            θ: decision threshold
+            σ: decision noise (inverse temperature)
+    
+    Prior Distributions:
+        α ~ Lognormal(0, 0.5)       (reward sensitivity, centered at 1)
+        λ ~ Lognormal(0, 0.5)       (loss aversion, centered at 1)
+        β ~ Gamma(2, 1)             (punishment sensitivity)
+        γ ~ Gamma(2, 1)             (punishment decay rate)
+        θ ~ Normal(0, 2)            (decision threshold)
+        σ ~ HalfNormal(1)           (decision noise)
+        c0 ~ Gamma(2, 1)            (baseline punishment)
+    
+    Parameters:
+    - alpha (α): reward sensitivity (α<1: risk averse, α>1: risk seeking)
+    - lambda_ (λ): loss aversion coefficient (λ>1: loss averse)
+    - beta (β): punishment sensitivity
+    - gamma (γ): punishment decay rate
+    - theta (θ): decision threshold
+    - sigma (σ): decision noise
+    - c0: baseline punishment level
+    """
+    
+    def __init__(self):
+        self.params = None
+        self.fitted = False
+        self.log_likelihood = None
+        self.aic = None
+        self.bic = None
+        self.prior_log_prob = None
+        self.posterior_log_prob = None
+        
+    def _sigmoid(self, x):
+        return expit(x)
+    
+    def _utility_reward(self, offer, alpha):
+        """
+        Power utility function for reward.
+        u(r) = r^α
+        """
+        # Ensure numerical stability for small offers
+        offer = np.clip(offer, 1e-10, 1.0)
+        return np.power(offer, alpha)
+    
+    def _punishment_function(self, offer, c0, gamma):
+        """
+        Punishment as a function of offer (decreases with higher offers).
+        c(r) = c0 * exp(-γ * r)
+        """
+        return c0 * np.exp(-gamma * offer)
+    
+    def _disutility_punishment(self, punishment, lambda_, beta):
+        """
+        Power disutility function for punishment.
+        v(c) = λ * c^β
+        """
+        punishment = np.clip(punishment, 1e-10, 100.0)
+        return lambda_ * np.power(punishment, beta)
+    
+    def _net_value(self, offer, alpha, lambda_, beta, gamma, c0):
+        """
+        Compute net subjective value.
+        V(r) = u(r) - v(c(r))
+        """
+        u_reward = self._utility_reward(offer, alpha)
+        punishment = self._punishment_function(offer, c0, gamma)
+        v_punishment = self._disutility_punishment(punishment, lambda_, beta)
+        return u_reward - v_punishment
+    
+    def _log_prior(self, params):
+        """
+        Compute log prior probability for all parameters.
+        
+        Prior distributions:
+        - α ~ Lognormal(0, 0.5)
+        - λ ~ Lognormal(0, 0.5)
+        - β ~ Gamma(2, 1)
+        - γ ~ Gamma(2, 1)
+        - θ ~ Normal(0, 2)
+        - σ ~ HalfNormal(1)
+        - c0 ~ Gamma(2, 1)
+        """
+        alpha, lambda_, beta, gamma, theta, sigma, c0 = params
+        
+        log_prior = 0.0
+        
+        # α ~ Lognormal(0, 0.5)
+        if alpha > 0:
+            log_prior += stats.lognorm.logpdf(alpha, s=0.5, scale=np.exp(0))
+        else:
+            return -np.inf
+        
+        # λ ~ Lognormal(0, 0.5)
+        if lambda_ > 0:
+            log_prior += stats.lognorm.logpdf(lambda_, s=0.5, scale=np.exp(0))
+        else:
+            return -np.inf
+        
+        # β ~ Gamma(2, 1)
+        if beta > 0:
+            log_prior += stats.gamma.logpdf(beta, a=2, scale=1)
+        else:
+            return -np.inf
+        
+        # γ ~ Gamma(2, 1)
+        if gamma > 0:
+            log_prior += stats.gamma.logpdf(gamma, a=2, scale=1)
+        else:
+            return -np.inf
+        
+        # θ ~ Normal(0, 2)
+        log_prior += stats.norm.logpdf(theta, loc=0, scale=2)
+        
+        # σ ~ HalfNormal(1)
+        if sigma > 0:
+            log_prior += stats.halfnorm.logpdf(sigma, scale=1)
+        else:
+            return -np.inf
+        
+        # c0 ~ Gamma(2, 1)
+        if c0 > 0:
+            log_prior += stats.gamma.logpdf(c0, a=2, scale=1)
+        else:
+            return -np.inf
+        
+        return log_prior
+    
+    def _log_likelihood(self, params, offers, decisions):
+        """
+        Compute log-likelihood for the Bayesian Utility model.
+        
+        P(y=1|r) = 1 / (1 + exp(-(V(r) - θ) / σ))
+        """
+        alpha, lambda_, beta, gamma, theta, sigma, c0 = params
+        
+        # Compute net values
+        net_values = self._net_value(offers, alpha, lambda_, beta, gamma, c0)
+        
+        # Decision probability
+        decision_values = (net_values - theta) / sigma
+        p_accept = self._sigmoid(decision_values)
+        
+        # Clip probabilities
+        eps = 1e-10
+        p_accept = np.clip(p_accept, eps, 1 - eps)
+        
+        # Log-likelihood
+        log_lik = np.sum(decisions * np.log(p_accept) + 
+                         (1 - decisions) * np.log(1 - p_accept))
+        
+        return log_lik
+    
+    def _neg_log_posterior(self, params, offers, decisions):
+        """
+        Compute negative log posterior (for MAP estimation).
+        log P(θ|y,r) ∝ log P(y|r,θ) + log P(θ)
+        """
+        log_prior = self._log_prior(params)
+        
+        if np.isinf(log_prior):
+            return np.inf
+        
+        log_lik = self._log_likelihood(params, offers, decisions)
+        
+        if np.isnan(log_lik) or np.isinf(log_lik):
+            return np.inf
+        
+        return -(log_prior + log_lik)
+    
+    def _neg_log_likelihood_only(self, params, offers, decisions):
+        """Compute negative log-likelihood (for MLE estimation)."""
+        log_lik = self._log_likelihood(params, offers, decisions)
+        if np.isnan(log_lik) or np.isinf(log_lik):
+            return np.inf
+        return -log_lik
+    
+    def fit(self, offers, decisions, method='MAP'):
+        """
+        Fit the Bayesian Utility model to data.
+        
+        Args:
+            offers: array of offer proportions (0-1)
+            decisions: array of decisions (1=accept, 0=reject)
+            method: 'MAP' for Maximum A Posteriori or 'MLE' for Maximum Likelihood
+        
+        Returns:
+            self
+        """
+        offers = np.asarray(offers)
+        decisions = np.asarray(decisions)
+        
+        # Initial parameters: [alpha, lambda_, beta, gamma, theta, sigma, c0]
+        init_params = [1.0, 1.0, 1.0, 3.0, 0.0, 1.0, 2.0]
+        
+        # Bounds (ensure positivity where needed)
+        bounds = [
+            (0.1, 3.0),     # alpha: reward sensitivity
+            (0.1, 5.0),     # lambda_: loss aversion
+            (0.1, 5.0),     # beta: punishment sensitivity
+            (0.1, 10.0),    # gamma: punishment decay
+            (-5.0, 5.0),    # theta: decision threshold
+            (0.1, 5.0),     # sigma: decision noise
+            (0.1, 10.0)     # c0: baseline punishment
+        ]
+        
+        # Choose objective function
+        if method == 'MAP':
+            obj_func = self._neg_log_posterior
+        else:
+            obj_func = self._neg_log_likelihood_only
+        
+        # Multiple random restarts
+        best_result = None
+        best_obj = np.inf
+        
+        for restart in range(5):
+            # Random initialization around prior modes
+            init = np.array([
+                np.random.lognormal(0, 0.3),      # alpha
+                np.random.lognormal(0, 0.3),      # lambda_
+                np.random.gamma(2, 0.5),          # beta
+                np.random.gamma(2, 0.5),          # gamma
+                np.random.normal(0, 1),           # theta
+                np.abs(np.random.normal(0, 0.5)) + 0.1,  # sigma
+                np.random.gamma(2, 0.5)           # c0
+            ])
+            
+            # Clip to bounds
+            for i, (lb, ub) in enumerate(bounds):
+                init[i] = np.clip(init[i], lb, ub)
+            
+            try:
+                result = minimize(
+                    obj_func,
+                    init,
+                    args=(offers, decisions),
+                    method='L-BFGS-B',
+                    bounds=bounds,
+                    options={'maxiter': 1000}
+                )
+                
+                if result.fun < best_obj:
+                    best_obj = result.fun
+                    best_result = result
+            except:
+                continue
+        
+        if best_result is None:
+            raise ValueError("Bayesian Utility model fitting failed")
+        
+        self.params = best_result.x
+        self.fitted = True
+        
+        # Compute log-likelihood (for AIC/BIC)
+        self.log_likelihood = self._log_likelihood(self.params, offers, decisions)
+        self.prior_log_prob = self._log_prior(self.params)
+        self.posterior_log_prob = self.log_likelihood + self.prior_log_prob
+        
+        # Calculate AIC and BIC
+        n = len(decisions)
+        k = len(self.params)
+        self.aic = 2 * k - 2 * self.log_likelihood
+        self.bic = k * np.log(n) - 2 * self.log_likelihood
+        
+        return self
+    
+    def predict_proba(self, offers):
+        """Predict acceptance probability."""
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        offers = np.asarray(offers)
+        alpha, lambda_, beta, gamma, theta, sigma, c0 = self.params
+        
+        net_values = self._net_value(offers, alpha, lambda_, beta, gamma, c0)
+        decision_values = (net_values - theta) / sigma
+        
+        return self._sigmoid(decision_values)
+    
+    def predict(self, offers, threshold=0.5):
+        """Predict binary decisions."""
+        return (self.predict_proba(offers) >= threshold).astype(int)
+    
+    def get_value_decomposition(self, offers):
+        """
+        Decompose net value into utility and disutility components.
+        
+        Useful for understanding model behavior and visualization.
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        offers = np.asarray(offers)
+        alpha, lambda_, beta, gamma, theta, sigma, c0 = self.params
+        
+        u_rewards = self._utility_reward(offers, alpha)
+        punishments = self._punishment_function(offers, c0, gamma)
+        v_punishments = self._disutility_punishment(punishments, lambda_, beta)
+        net_values = u_rewards - v_punishments
+        
+        return {
+            'offers': offers,
+            'u_reward': u_rewards,
+            'punishment': punishments,
+            'v_punishment': v_punishments,
+            'net_value': net_values
+        }
+    
+    def get_indifference_point(self):
+        """
+        Find the offer proportion where V(r) = θ (decision threshold).
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        alpha, lambda_, beta, gamma, theta, sigma, c0 = self.params
+        
+        from scipy.optimize import brentq
+        
+        def value_at_threshold(offer):
+            return self._net_value(offer, alpha, lambda_, beta, gamma, c0) - theta
+        
+        try:
+            indiff_point = brentq(value_at_threshold, 0.01, 0.99)
+            return indiff_point
+        except ValueError:
+            return None
+    
+    def get_risk_attitude(self):
+        """
+        Determine risk attitude based on reward sensitivity parameter.
+        
+        α < 1: Risk averse (concave utility)
+        α = 1: Risk neutral (linear utility)
+        α > 1: Risk seeking (convex utility)
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        alpha = self.params[0]
+        
+        if alpha < 0.9:
+            return 'risk_averse'
+        elif alpha > 1.1:
+            return 'risk_seeking'
+        else:
+            return 'risk_neutral'
+    
+    def get_loss_aversion(self):
+        """
+        Determine loss aversion level.
+        
+        λ > 1: Loss averse (punishment weighted more than reward)
+        λ = 1: No loss aversion
+        λ < 1: Gain seeking (reward weighted more)
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        lambda_ = self.params[1]
+        
+        if lambda_ > 1.1:
+            return 'loss_averse'
+        elif lambda_ < 0.9:
+            return 'gain_seeking'
+        else:
+            return 'neutral'
+    
+    def summary(self):
+        """Return model summary."""
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        indiff_point = self.get_indifference_point()
+        risk_attitude = self.get_risk_attitude()
+        loss_aversion = self.get_loss_aversion()
+        
+        return {
+            'model': 'Bayesian Utility Model',
+            'hypothesis': 'H2++: Formal Bayesian value-risk tradeoff',
+            'n_params': len(self.params),
+            'params': {
+                'α (reward sensitivity)': self.params[0],
+                'λ (loss aversion)': self.params[1],
+                'β (punishment sensitivity)': self.params[2],
+                'γ (punishment decay)': self.params[3],
+                'θ (decision threshold)': self.params[4],
+                'σ (decision noise)': self.params[5],
+                'c0 (baseline punishment)': self.params[6]
+            },
+            'interpretation': {
+                'risk_attitude': risk_attitude,
+                'loss_aversion': loss_aversion,
+                'indifference_point': indiff_point
+            },
+            'log_likelihood': self.log_likelihood,
+            'prior_log_prob': self.prior_log_prob,
+            'posterior_log_prob': self.posterior_log_prob,
+            'aic': self.aic,
+            'bic': self.bic
+        }
+
+
+# ============================================================================
+# Model 6: Hidden Markov Model (Hypothesis 3)
 # State-based decision model with decision history influence
 # ============================================================================
 
@@ -1080,10 +1510,18 @@ def compare_models(offers, decisions, prev_offers=None, verbose=True):
     m5.fit(offers, decisions)
     results['rl_bayesian'] = m5
     
+    # Model 5: Bayesian Utility Model (formal Bayesian framework)
+    if verbose:
+        print("Fitting Bayesian Utility Model (H2++)...")
+    m6 = BayesianUtilityModel()
+    m6.fit(offers, decisions, method='MAP')
+    results['bayesian_utility'] = m6
+    
     # Comparison
-    all_models = [m1, m2, m3, m4, m5]
-    model_names = ['Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'HMM (H3)', 'RL-Bayesian (H2+)']
-    hypotheses = ['H1', 'H2', 'H2', 'H3', 'H2+']
+    all_models = [m1, m2, m3, m4, m5, m6]
+    model_names = ['Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'HMM (H3)', 
+                   'RL-Bayesian (H2+)', 'Bayesian Utility (H2++)']
+    hypotheses = ['H1', 'H2', 'H2', 'H3', 'H2+', 'H2++']
     
     comparison = pd.DataFrame({
         'Model': model_names,
@@ -1123,6 +1561,9 @@ def compare_models(offers, decisions, prev_offers=None, verbose=True):
         elif best_model == 'H2+':
             print("→ Decisions follow RL reward-punishment framework with Bayesian updating")
             print("  (Accept = reward + punishment; punishment decreases with higher offers)")
+        elif best_model == 'H2++':
+            print("→ Decisions follow formal Bayesian utility model with power functions")
+            print("  (u(r)=r^α, v(c)=λ*c^β; proper priors on all parameters)")
         elif best_model == 'H3':
             print("→ Decisions depend on current/previous amounts AND previous decisions")
     
@@ -1155,7 +1596,8 @@ def cross_validate_models(offers, decisions, n_folds=5, verbose=True):
         'Linear_History': [],
         'Bayesian': [],
         'HMM': [],
-        'RL_Bayesian': []
+        'RL_Bayesian': [],
+        'Bayesian_Utility': []
     }
     
     for fold in range(n_folds):
@@ -1220,6 +1662,14 @@ def cross_validate_models(offers, decisions, n_folds=5, verbose=True):
             ll5 = np.mean(test_decisions * np.log(pred5 + 1e-10) + 
                          (1 - test_decisions) * np.log(1 - pred5 + 1e-10))
             cv_results['RL_Bayesian'].append(ll5)
+            
+            # Bayesian Utility Model
+            m6 = BayesianUtilityModel()
+            m6.fit(train_offers, train_decisions, method='MAP')
+            pred6 = m6.predict_proba(test_offers)
+            ll6 = np.mean(test_decisions * np.log(pred6 + 1e-10) + 
+                         (1 - test_decisions) * np.log(1 - pred6 + 1e-10))
+            cv_results['Bayesian_Utility'].append(ll6)
         except Exception as e:
             if verbose:
                 print(f"  Error in fold {fold + 1}: {e}")
