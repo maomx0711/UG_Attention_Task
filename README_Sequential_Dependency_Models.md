@@ -4,9 +4,9 @@
 
 ## 概述 | Overview
 
-本模块实现了四种数学模型，用于验证最后通牒任务（Ultimatum Game）中被试决策的序列依赖效应假设。
+本模块实现了五种数学模型，用于验证最后通牒任务（Ultimatum Game）中被试决策的序列依赖效应假设。
 
-This module implements four mathematical models to verify hypotheses about sequential dependency effects in the Ultimatum Game decision-making task.
+This module implements five mathematical models to verify hypotheses about sequential dependency effects in the Ultimatum Game decision-making task.
 
 ## 研究假设 | Research Hypotheses
 
@@ -21,6 +21,12 @@ Decisions depend solely on the current offer amount. If the offer meets an inter
 
 **Hypothesis 2 (H2): Current and previous offers**
 Decisions depend on both previous and current offer amounts. Contrast effects or adaptive threshold adjustment may occur.
+
+### 假设2+ (H2+): 强化学习+贝叶斯模型
+基于强化学习的框架：接受提议获得奖励，同时也遭受惩罚（违反公平准则），但惩罚随金额增加而减少。结合贝叶斯信念更新。
+
+**Hypothesis 2+ (H2+): Reinforcement Learning + Bayesian Model**
+Decisions follow a reward-punishment framework: accepting provides monetary reward but also incurs punishment for violating fairness norms. The punishment decreases as the offer amount increases. Combined with Bayesian belief updating.
 
 ### 假设3 (H3): 金额和先前决策共同影响
 被试的决策不仅依赖当前和先前金额的影响，还受到先前决策（接受/拒绝）的影响。
@@ -73,7 +79,34 @@ E[offer]_t = (1-α)×E[offer]_{t-1} + α×offer_{t-1}
 - β₂: offer直接效应
 - α: 学习率
 
-### 模型4: 隐马尔可夫模型 (Hidden Markov Model) - 测试H3
+### 模型4: 强化学习+贝叶斯模型 (RL-Bayesian Model) - 测试H2+
+
+基于强化学习框架的决策模型，将UG任务视为风险决策：
+
+```
+U(accept) = reward - punishment
+reward = w_r × offer
+punishment = w_p × exp(-γ × offer)
+
+P(accept) = sigmoid(β × U + bias + λ × (offer - E[offer]))
+```
+
+**核心思想:**
+- 接受提议获得**奖励**（与金额成正比）
+- 接受低offer会遭受**惩罚**（违反内在公平准则）
+- 惩罚随offer金额增加而**指数衰减**（高offer减轻公平违反感）
+- 结合贝叶斯期望更新（惊讶效应）
+
+**参数:**
+- w_r: 奖励权重（对金钱奖励的敏感度）
+- w_p: 惩罚权重（对公平违反的敏感度）
+- γ: 惩罚衰减率（惩罚随offer增加的衰减速度）
+- β: 逆温度（决策一致性）
+- bias: 基线接受偏向
+- λ: 期望偏差效应
+- α: 学习率
+
+### 模型5: 隐马尔可夫模型 (Hidden Markov Model) - 测试H3
 
 状态依赖的决策模型，假设被试处于两种潜在状态之一：
 - 状态0: "严格"状态（较低的接受概率）

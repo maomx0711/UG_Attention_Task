@@ -3,18 +3,24 @@
 """
 Sequential Dependency Models for Ultimatum Game (UG) Task
 
-This module implements four mathematical models to verify hypotheses about sequential 
+This module implements mathematical models to verify hypotheses about sequential 
 dependency effects in the Ultimatum Game:
 
 Hypothesis 1: Decisions depend only on the current amount (Threshold Model)
 Hypothesis 2: Decisions depend on both previous and current amounts (Linear/Bayesian Models)
+Hypothesis 2+: Decisions follow RL reward-punishment framework with Bayesian updating
 Hypothesis 3: Decisions depend on current/previous amounts AND previous decisions (HMM)
 
 Models implemented:
 1. Threshold Model - Simple logistic regression on current offer
 2. Linear Model with History - Logistic regression including previous trial information
 3. Bayesian Decision Model - Adaptive threshold based on prior beliefs
-4. Hidden Markov Model (HMM) - State-based decision model with decision history influence
+4. Reinforcement Learning + Bayesian Model - Reward-punishment framework where:
+   - Accepting provides reward (monetary gain)
+   - Accepting incurs punishment (fairness violation)
+   - Punishment decreases as offer amount increases
+   - Combined with Bayesian belief updating
+5. Hidden Markov Model (HMM) - State-based decision model with decision history influence
 
 Author: Sequential Dependency Analysis
 Date: 2026-01-05
@@ -450,7 +456,286 @@ class BayesianDecisionModel:
 
 
 # ============================================================================
-# Model 4: Hidden Markov Model (Hypothesis 3)
+# Model 4: Reinforcement Learning + Bayesian Model (Hypothesis 2+)
+# Reward-Punishment framework with Bayesian belief updating
+# ============================================================================
+
+class ReinforcementLearningBayesianModel:
+    """
+    Reinforcement Learning model combined with Bayesian belief updating.
+    
+    This model treats the UG decision as a risk-decision task where:
+    - Accepting an offer provides REWARD (monetary gain)
+    - Accepting also incurs PUNISHMENT (violating internal fairness norm)
+    - Punishment DECREASES as offer amount INCREASES (unfair offers hurt more)
+    - The expected offer is updated through Bayesian learning
+    
+    The utility of accepting is:
+        U(accept) = reward - punishment
+        reward = w_r * offer
+        punishment = w_p * exp(-gamma * offer)  # decreases with higher offers
+    
+    The utility of rejecting is:
+        U(reject) = 0  # neither reward nor punishment
+    
+    Decision probability:
+        P(accept) = sigmoid(beta * (U(accept) - U(reject) + bias + 
+                                    lambda * (offer - expected_offer)))
+    
+    Parameters:
+    - w_r: reward weight (sensitivity to monetary reward)
+    - w_p: punishment weight (sensitivity to fairness violation)
+    - gamma: punishment decay rate (how fast punishment decreases with offer)
+    - beta: inverse temperature (decision consistency)
+    - bias: baseline acceptance bias
+    - lambda: Bayesian expectation effect
+    - alpha: learning rate for belief updating
+    """
+    
+    def __init__(self, learning_rate=0.2):
+        self.params = None
+        self.learning_rate = learning_rate
+        self.fitted = False
+        self.log_likelihood = None
+        self.aic = None
+        self.bic = None
+        
+    def _sigmoid(self, x):
+        return expit(x)
+    
+    def _compute_expectations(self, offers):
+        """
+        Compute running expected values using exponential moving average (Bayesian updating).
+        """
+        n = len(offers)
+        expectations = np.zeros(n)
+        expectations[0] = 0.5  # Initial expectation: fair split
+        
+        for t in range(1, n):
+            expectations[t] = ((1 - self.learning_rate) * expectations[t-1] + 
+                              self.learning_rate * offers[t-1])
+        
+        return expectations
+    
+    def _compute_utility(self, offer, w_r, w_p, gamma):
+        """
+        Compute utility of accepting an offer.
+        
+        U(accept) = reward - punishment
+        where:
+            reward = w_r * offer  (higher offer = more reward)
+            punishment = w_p * exp(-gamma * offer)  (higher offer = less punishment)
+        
+        Args:
+            offer: offer proportion (0-1)
+            w_r: reward weight
+            w_p: punishment weight
+            gamma: punishment decay rate
+        
+        Returns:
+            utility of accepting
+        """
+        reward = w_r * offer
+        punishment = w_p * np.exp(-gamma * offer)
+        return reward - punishment
+    
+    def _neg_log_likelihood(self, params, offers, decisions):
+        """
+        Compute negative log-likelihood for the RL-Bayesian model.
+        
+        Args:
+            params: [w_r, w_p, gamma, beta, bias, lambda_exp, alpha]
+            offers: array of offer proportions
+            decisions: array of decisions (1=accept, 0=reject)
+        """
+        w_r, w_p, gamma, beta, bias, lambda_exp, alpha = params
+        self.learning_rate = alpha
+        
+        expectations = self._compute_expectations(offers)
+        
+        # Compute utilities for each trial
+        utilities = self._compute_utility(offers, w_r, w_p, gamma)
+        
+        # Bayesian expectation effect: surprise when offer differs from expectation
+        expectation_effect = lambda_exp * (offers - expectations)
+        
+        # Decision value (utility + bias + expectation effect)
+        decision_values = beta * utilities + bias + expectation_effect
+        
+        # P(accept)
+        p_accept = self._sigmoid(decision_values)
+        
+        eps = 1e-10
+        p_accept = np.clip(p_accept, eps, 1 - eps)
+        
+        log_lik = np.sum(decisions * np.log(p_accept) + 
+                         (1 - decisions) * np.log(1 - p_accept))
+        return -log_lik
+    
+    def fit(self, offers, decisions):
+        """
+        Fit the RL-Bayesian model to data.
+        
+        Args:
+            offers: array of offer proportions (0-1)
+            decisions: array of decisions (1=accept, 0=reject)
+        """
+        offers = np.asarray(offers)
+        decisions = np.asarray(decisions)
+        
+        # Initial parameters: [w_r, w_p, gamma, beta, bias, lambda_exp, alpha]
+        init_params = [5.0, 2.0, 3.0, 1.0, 0.0, 2.0, 0.2]
+        
+        # Bounds
+        bounds = [
+            (0.1, 20.0),    # w_r: reward weight (positive)
+            (0.1, 20.0),    # w_p: punishment weight (positive)
+            (0.1, 20.0),    # gamma: punishment decay rate (positive)
+            (0.1, 10.0),    # beta: inverse temperature (positive)
+            (-5.0, 5.0),    # bias: can be negative or positive
+            (-20.0, 20.0),  # lambda_exp: expectation effect
+            (0.01, 0.99)    # alpha: learning rate
+        ]
+        
+        # Multiple random restarts
+        best_result = None
+        best_nll = np.inf
+        
+        for restart in range(5):
+            # Random initialization
+            init = np.array(init_params) + np.random.randn(len(init_params)) * 0.5
+            # Clip to bounds
+            for i, (lb, ub) in enumerate(bounds):
+                init[i] = np.clip(init[i], lb, ub)
+            
+            try:
+                result = minimize(
+                    self._neg_log_likelihood,
+                    init,
+                    args=(offers, decisions),
+                    method='L-BFGS-B',
+                    bounds=bounds,
+                    options={'maxiter': 1000}
+                )
+                
+                if result.fun < best_nll:
+                    best_nll = result.fun
+                    best_result = result
+            except:
+                continue
+        
+        if best_result is None:
+            raise ValueError("RL-Bayesian model fitting failed")
+        
+        self.params = best_result.x
+        self.learning_rate = self.params[6]
+        self.fitted = True
+        self.log_likelihood = -best_result.fun
+        
+        # Calculate AIC and BIC
+        n = len(decisions)
+        k = len(self.params)
+        self.aic = 2 * k - 2 * self.log_likelihood
+        self.bic = k * np.log(n) - 2 * self.log_likelihood
+        
+        return self
+    
+    def predict_proba(self, offers):
+        """Predict acceptance probability."""
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        offers = np.asarray(offers)
+        w_r, w_p, gamma, beta, bias, lambda_exp, alpha = self.params
+        
+        expectations = self._compute_expectations(offers)
+        utilities = self._compute_utility(offers, w_r, w_p, gamma)
+        expectation_effect = lambda_exp * (offers - expectations)
+        decision_values = beta * utilities + bias + expectation_effect
+        
+        return self._sigmoid(decision_values)
+    
+    def predict(self, offers, threshold=0.5):
+        """Predict binary decisions."""
+        return (self.predict_proba(offers) >= threshold).astype(int)
+    
+    def get_utility_components(self, offers):
+        """
+        Decompose utility into reward and punishment components.
+        
+        Useful for understanding model behavior and visualization.
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        offers = np.asarray(offers)
+        w_r, w_p, gamma = self.params[:3]
+        
+        rewards = w_r * offers
+        punishments = w_p * np.exp(-gamma * offers)
+        utilities = rewards - punishments
+        
+        return {
+            'offers': offers,
+            'rewards': rewards,
+            'punishments': punishments,
+            'utilities': utilities
+        }
+    
+    def get_indifference_point(self):
+        """
+        Find the offer proportion where utility = 0 (indifference point).
+        This is where reward equals punishment.
+        """
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        w_r, w_p, gamma = self.params[:3]
+        
+        # Solve: w_r * offer = w_p * exp(-gamma * offer)
+        # This requires numerical solution
+        from scipy.optimize import brentq
+        
+        def utility_zero(offer):
+            return w_r * offer - w_p * np.exp(-gamma * offer)
+        
+        try:
+            # Search for root in [0.01, 0.99]
+            indiff_point = brentq(utility_zero, 0.01, 0.99)
+            return indiff_point
+        except ValueError:
+            # No root in the range
+            return None
+    
+    def summary(self):
+        """Return model summary."""
+        if not self.fitted:
+            raise ValueError("Model not fitted yet.")
+        
+        indiff_point = self.get_indifference_point()
+        
+        return {
+            'model': 'Reinforcement Learning + Bayesian Model',
+            'hypothesis': 'H2+: RL reward-punishment with Bayesian updating',
+            'n_params': len(self.params),
+            'params': {
+                'w_r (reward weight)': self.params[0],
+                'w_p (punishment weight)': self.params[1],
+                'gamma (punishment decay)': self.params[2],
+                'beta (inverse temperature)': self.params[3],
+                'bias': self.params[4],
+                'lambda (expectation effect)': self.params[5],
+                'alpha (learning rate)': self.params[6]
+            },
+            'indifference_point': indiff_point,
+            'log_likelihood': self.log_likelihood,
+            'aic': self.aic,
+            'bic': self.bic
+        }
+
+
+# ============================================================================
+# Model 5: Hidden Markov Model (Hypothesis 3)
 # State-based decision model with decision history influence
 # ============================================================================
 
@@ -788,14 +1073,25 @@ def compare_models(offers, decisions, prev_offers=None, verbose=True):
     m4.fit(offers, decisions)
     results['hmm'] = m4
     
+    # Model 4: Reinforcement Learning + Bayesian Model
+    if verbose:
+        print("Fitting RL-Bayesian Model (H2+)...")
+    m5 = ReinforcementLearningBayesianModel(learning_rate=0.2)
+    m5.fit(offers, decisions)
+    results['rl_bayesian'] = m5
+    
     # Comparison
+    all_models = [m1, m2, m3, m4, m5]
+    model_names = ['Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'HMM (H3)', 'RL-Bayesian (H2+)']
+    hypotheses = ['H1', 'H2', 'H2', 'H3', 'H2+']
+    
     comparison = pd.DataFrame({
-        'Model': ['Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'HMM (H3)'],
-        'Hypothesis': ['H1', 'H2', 'H2', 'H3'],
-        'N_Params': [m.summary()['n_params'] for m in [m1, m2, m3, m4]],
-        'Log_Likelihood': [m.log_likelihood for m in [m1, m2, m3, m4]],
-        'AIC': [m.aic for m in [m1, m2, m3, m4]],
-        'BIC': [m.bic for m in [m1, m2, m3, m4]]
+        'Model': model_names,
+        'Hypothesis': hypotheses,
+        'N_Params': [m.summary()['n_params'] for m in all_models],
+        'Log_Likelihood': [m.log_likelihood for m in all_models],
+        'AIC': [m.aic for m in all_models],
+        'BIC': [m.bic for m in all_models]
     })
     
     # Compute delta AIC/BIC
@@ -824,6 +1120,9 @@ def compare_models(offers, decisions, prev_offers=None, verbose=True):
             print("→ Decisions depend ONLY on current offer amount")
         elif best_model == 'H2':
             print("→ Decisions depend on BOTH current and previous offer amounts")
+        elif best_model == 'H2+':
+            print("→ Decisions follow RL reward-punishment framework with Bayesian updating")
+            print("  (Accept = reward + punishment; punishment decreases with higher offers)")
         elif best_model == 'H3':
             print("→ Decisions depend on current/previous amounts AND previous decisions")
     
@@ -855,7 +1154,8 @@ def cross_validate_models(offers, decisions, n_folds=5, verbose=True):
         'Threshold': [],
         'Linear_History': [],
         'Bayesian': [],
-        'HMM': []
+        'HMM': [],
+        'RL_Bayesian': []
     }
     
     for fold in range(n_folds):
@@ -912,6 +1212,14 @@ def cross_validate_models(offers, decisions, n_folds=5, verbose=True):
             ll4 = np.mean(test_decisions * np.log(pred4 + 1e-10) + 
                          (1 - test_decisions) * np.log(1 - pred4 + 1e-10))
             cv_results['HMM'].append(ll4)
+            
+            # RL-Bayesian Model
+            m5 = ReinforcementLearningBayesianModel()
+            m5.fit(train_offers, train_decisions)
+            pred5 = m5.predict_proba(test_offers)
+            ll5 = np.mean(test_decisions * np.log(pred5 + 1e-10) + 
+                         (1 - test_decisions) * np.log(1 - pred5 + 1e-10))
+            cv_results['RL_Bayesian'].append(ll5)
         except Exception as e:
             if verbose:
                 print(f"  Error in fold {fold + 1}: {e}")

@@ -6,6 +6,7 @@
 % Hypothesis 1: Decisions depend only on the current amount (Threshold Model)
 % Hypothesis 2: Decisions depend on both previous and current amounts 
 %               (Linear Model/Bayesian Model)
+% Hypothesis 2+: RL reward-punishment framework with Bayesian updating
 % Hypothesis 3: Decisions depend on current/previous amounts AND previous 
 %               decisions (HMM)
 %
@@ -13,7 +14,8 @@
 % 1. Threshold Model - Simple logistic regression on current offer
 % 2. Linear Model with History - Logistic regression with previous trial info
 % 3. Bayesian Decision Model - Adaptive threshold based on prior beliefs
-% 4. Hidden Markov Model (HMM) - State-based decision model
+% 4. RL-Bayesian Model - Reward-punishment with Bayesian updating
+% 5. Hidden Markov Model (HMM) - State-based decision model
 %
 % Author: Sequential Dependency Analysis
 % Date: 2026-01-05
@@ -116,7 +118,27 @@ fprintf('Log-likelihood: %.2f\n', -nll_bayes);
 fprintf('AIC: %.2f, BIC: %.2f\n', aic_bayes, bic_bayes);
 
 %% ========================================================================
-% Model 4: Hidden Markov Model (Hypothesis 3)
+% Model 4: RL-Bayesian Model (Hypothesis 2+)
+% Reinforcement Learning + Bayesian belief updating
+% ========================================================================
+fprintf('\n=== Fitting RL-Bayesian Model (H2+) ===\n');
+
+[params_rl, nll_rl, aic_rl, bic_rl] = ...
+    fit_rl_bayesian_model(offers, decisions, options);
+
+fprintf('Parameters:\n');
+fprintf('  w_r (reward weight): %.3f\n', params_rl(1));
+fprintf('  w_p (punishment weight): %.3f\n', params_rl(2));
+fprintf('  gamma (punishment decay): %.3f\n', params_rl(3));
+fprintf('  beta (inverse temperature): %.3f\n', params_rl(4));
+fprintf('  bias: %.3f\n', params_rl(5));
+fprintf('  lambda (expectation effect): %.3f\n', params_rl(6));
+fprintf('  alpha (learning rate): %.3f\n', params_rl(7));
+fprintf('Log-likelihood: %.2f\n', -nll_rl);
+fprintf('AIC: %.2f, BIC: %.2f\n', aic_rl, bic_rl);
+
+%% ========================================================================
+% Model 5: Hidden Markov Model (Hypothesis 3)
 % ========================================================================
 fprintf('\n=== Fitting Hidden Markov Model (H3) ===\n');
 
@@ -145,11 +167,11 @@ fprintf('==============================================================\n');
 fprintf('\n');
 
 % Create comparison table
-models = {'Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'HMM (H3)'};
-n_params = [2, 4, 4, 9];
-log_likelihoods = [-nll_threshold, -nll_linear, -nll_bayes, -nll_hmm];
-aics = [aic_threshold, aic_linear, aic_bayes, aic_hmm];
-bics = [bic_threshold, bic_linear, bic_bayes, bic_hmm];
+models = {'Threshold (H1)', 'Linear History (H2)', 'Bayesian (H2)', 'RL-Bayesian (H2+)', 'HMM (H3)'};
+n_params = [2, 4, 4, 7, 9];
+log_likelihoods = [-nll_threshold, -nll_linear, -nll_bayes, -nll_rl, -nll_hmm];
+aics = [aic_threshold, aic_linear, aic_bayes, aic_rl, aic_hmm];
+bics = [bic_threshold, bic_linear, bic_bayes, bic_rl, bic_hmm];
 
 % Delta AIC/BIC
 delta_aic = aics - min(aics);
@@ -192,6 +214,10 @@ elseif best_bic_idx == 2 || best_bic_idx == 3
     fprintf('\nSupported Hypothesis: H2\n');
     fprintf('→ Decisions depend on BOTH current and previous offer amounts\n');
     fprintf('  Sequential effects on decision-making are present.\n');
+elseif best_bic_idx == 4
+    fprintf('\nSupported Hypothesis: H2+ (RL-Bayesian)\n');
+    fprintf('→ Decisions follow RL reward-punishment framework with Bayesian updating\n');
+    fprintf('  Accept = reward + punishment; punishment decreases with higher offers.\n');
 else
     fprintf('\nSupported Hypothesis: H3\n');
     fprintf('→ Decisions depend on offers AND previous decisions\n');
@@ -550,6 +576,96 @@ function nll = hmm_nll(params, offers, decisions)
     
     % Log-likelihood
     nll = -sum(log(scale));
+end
+
+function [params, nll, aic, bic] = fit_rl_bayesian_model(offers, decisions, options)
+    % Fit Reinforcement Learning + Bayesian Model
+    % U(accept) = w_r * offer - w_p * exp(-gamma * offer)
+    % P(accept) = sigmoid(beta * U + bias + lambda * (offer - expectation))
+    
+    n = length(offers);
+    
+    % Objective function
+    obj_func = @(p) rl_bayesian_nll(p, offers, decisions);
+    
+    % Initial parameters: [w_r, w_p, gamma, beta, bias, lambda, alpha]
+    init_params = [5, 2, 3, 1, 0, 2, 0.2];
+    
+    % Bounds
+    lb = [0.1, 0.1, 0.1, 0.1, -5, -20, 0.01];
+    ub = [20, 20, 20, 10, 5, 20, 0.99];
+    
+    % Multiple restarts
+    best_nll = Inf;
+    best_params = init_params;
+    
+    opt_options = optimoptions('fmincon', 'Display', 'off', ...
+        'MaxIterations', options.max_iter);
+    
+    for r = 1:options.n_restarts
+        % Random initialization
+        try_params = init_params + 0.5 * randn(size(init_params));
+        try_params = max(min(try_params, ub), lb);
+        
+        try
+            [try_opt_params, try_nll] = fmincon(obj_func, try_params, ...
+                [], [], [], [], lb, ub, [], opt_options);
+            
+            if try_nll < best_nll
+                best_nll = try_nll;
+                best_params = try_opt_params;
+            end
+        catch
+            continue;
+        end
+    end
+    
+    params = best_params;
+    nll = best_nll;
+    
+    % Calculate AIC/BIC
+    k = 7;
+    aic = 2*k + 2*nll;
+    bic = k*log(n) + 2*nll;
+end
+
+function nll = rl_bayesian_nll(params, offers, decisions)
+    % Negative log-likelihood for RL-Bayesian model
+    w_r = params(1);      % reward weight
+    w_p = params(2);      % punishment weight
+    gamma_p = params(3);  % punishment decay
+    beta = params(4);     % inverse temperature
+    bias = params(5);     % baseline bias
+    lambda = params(6);   % expectation effect
+    alpha = params(7);    % learning rate
+    
+    n = length(offers);
+    
+    % Compute running expectations
+    expectations = zeros(1, n);
+    expectations(1) = 0.5;
+    for t = 2:n
+        expectations(t) = (1 - alpha) * expectations(t-1) + alpha * offers(t-1);
+    end
+    
+    % Compute utilities: U = reward - punishment
+    rewards = w_r * offers;
+    punishments = w_p * exp(-gamma_p * offers);
+    utilities = rewards - punishments;
+    
+    % Bayesian expectation effect
+    expectation_effects = lambda * (offers - expectations);
+    
+    % Decision values
+    decision_values = beta * utilities + bias + expectation_effects;
+    
+    % P(accept)
+    p_accept = 1 ./ (1 + exp(-decision_values));
+    
+    eps = 1e-10;
+    p_accept = max(min(p_accept, 1-eps), eps);
+    
+    nll = -sum(decisions .* log(p_accept) + (1-decisions) .* log(1-p_accept));
 end
 
 function [offers, decisions] = simulate_ug_data(n_trials, true_model, seed)
