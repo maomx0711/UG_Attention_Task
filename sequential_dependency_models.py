@@ -903,10 +903,12 @@ def cross_validate_models(offers, decisions, n_folds=5, verbose=True):
                          (1 - test_decisions) * np.log(1 - pred3 + 1e-10))
             cv_results['Bayesian'].append(ll3)
             
-            # HMM
+            # HMM - Note: For fair comparison, we predict without using test decisions
+            # This uses the stationary state distribution for predictions
             m4 = HiddenMarkovModel()
             m4.fit(train_offers, train_decisions)
-            pred4 = m4.predict_proba(test_offers, test_decisions)
+            # Use None for prev_decisions to avoid data leakage - model uses prior state distribution
+            pred4 = m4.predict_proba(test_offers, prev_decisions=None)
             ll4 = np.mean(test_decisions * np.log(pred4 + 1e-10) + 
                          (1 - test_decisions) * np.log(1 - pred4 + 1e-10))
             cv_results['HMM'].append(ll4)
@@ -1070,11 +1072,11 @@ def load_behavioral_data(filepath):
         # Look for result matrix as in SD_UG.m
         if 'result' in data:
             result = data['result']
-            # Based on SD_UG.m:
-            # result(7,:) = discount (offer rate)
-            # result(4,:) = accept/reject decision
-            offers = result[6, :]  # 0-indexed
-            decisions = result[3, :]  # 0-indexed
+            # Based on SD_UG.m (MATLAB uses 1-indexed arrays):
+            # result(7,:) = discount (offer rate) -> Python: result[6, :] (0-indexed)
+            # result(4,:) = accept/reject decision -> Python: result[3, :] (0-indexed)
+            offers = result[6, :]  # MATLAB row 7 = Python index 6
+            decisions = result[3, :]  # MATLAB row 4 = Python index 3
             return offers, decisions
         else:
             raise ValueError(f"Could not find 'result' matrix in {filepath}")

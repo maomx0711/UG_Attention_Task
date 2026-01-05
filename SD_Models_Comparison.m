@@ -54,8 +54,10 @@ else
     % Load first subject for demonstration
     data = load(fullfile(data_folder, fileList(1).name));
     result = data.result;
-    offers = result(7, :);      % Discount rate (offer proportion)
-    decisions = result(4, :);   % Accept (1) or Reject (0)
+    % Note: MATLAB uses 1-indexed arrays (row 7 for offers, row 4 for decisions)
+    % This differs from Python which uses 0-indexed arrays (index 6 and 3)
+    offers = result(7, :);      % Discount rate (offer proportion) - MATLAB row 7
+    decisions = result(4, :);   % Accept (1) or Reject (0) - MATLAB row 4
     
     % Filter valid trials
     valid_idx = offers >= 0 & offers <= 1;
