@@ -495,6 +495,10 @@ const roleConfirm = {
             <p>接下来将呈现 <strong>9 个情境</strong>，请逐一阅读并作答。</p>
             <p style="margin-top:28px; color:#2d6a9f;"><strong>按任意键开始</strong></p>
         </div>`;
+    },
+    on_finish: function() {
+        jsPsych.data.addProperties({ subject_id: subID, role: selectedRole });
+        jsPsych.addNodeToEndOfTimeline({ timeline: buildScenarioTrials(selectedRole) });
     }
 };
 
@@ -564,7 +568,7 @@ function buildScenarioTrials(role) {
                 trial_index: current
             },
             on_finish: function(data) {
-                const resp = JSON.parse(data.responses);
+                const resp = data.response || JSON.parse(data.responses);
                 allResponses.push({
                     trial_index: current,
                     dimension: sc.dim,
@@ -580,15 +584,6 @@ function buildScenarioTrials(role) {
 
     return trials;
 }
-
-const scenarioBlock = {
-    timeline: function() {
-        jsPsych.data.addProperties({ subject_id: subID, role: selectedRole });
-        return buildScenarioTrials(selectedRole);
-    }
-};
-
-timeline.push(scenarioBlock);
 
 jsPsych.run(timeline);
 
