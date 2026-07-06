@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园公平情境想象任务</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+</head>
+<body></body>
+
+<script>
+document.head.innerHTML += `
+<style>
+    body {
+        user-select: none;
+        -webkit-user-select: none;
+        background: linear-gradient(160deg, #f3f0ff 0%, #e8f4f8 50%, #f0faf4 100%);
+        color: #1a2332;
+        font-size: 17pt;
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+        line-height: 1.75;
+        min-height: 100vh;
+    }
+    .jspsych-content-wrapper { max-width: 960px; }
+    .jspsych-btn {
+        font-size: 15pt;
+        font-family: inherit;
+        margin: 0.6em 0.3em;
+        padding: 12px 28px;
+        border-radius: 8px;
+        background: #5c4db1;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .jspsych-btn:hover { background: #4a3d96; }
+    .jspsych-btn:disabled { background: #aab4c0; cursor: not-allowed; }
+
+    .page-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 36px 42px;
+        box-shadow: 0 4px 24px rgba(60, 40, 120, 0.10);
+        text-align: left;
+        margin: 0 auto;
+    }
+    .page-title {
+        font-size: 26pt;
+        font-weight: 700;
+        color: #3d2e7a;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .page-subtitle {
+        font-size: 14pt;
+        color: #6a5d8a;
+        text-align: center;
+        margin-bottom: 28px;
+    }
+    .dim-badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 12pt;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    .dim-distributive { background: #e3f2fd; color: #1565c0; }
+    .dim-procedural   { background: #e8f5e9; color: #2e7d32; }
+    .dim-interactional{ background: #fce4ec; color: #c62828; }
+
+    .persp-badge {
+        display: inline-block;
+        padding: 3px 12px;
+        border-radius: 6px;
+        font-size: 11pt;
+        font-weight: 600;
+        margin-left: 8px;
+        background: #f5f5f5;
+        color: #555;
+    }
+    .persp-victim      { border-left: 3px solid #e53935; }
+    .persp-beneficiary { border-left: 3px solid #43a047; }
+    .persp-bystander   { border-left: 3px solid #fb8c00; }
+
+    .role-badge {
+        display: inline-block;
+        padding: 5px 16px;
+        border-radius: 8px;
+        font-size: 13pt;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+    .role-participant { background: #e8eaf6; color: #283593; }
+    .role-dominator   { background: #fff3e0; color: #e65100; }
+
+    .scenario-box {
+        background: #faf9ff;
+        border: 1px solid #e4dff0;
+        border-left: 5px solid #5c4db1;
+        border-radius: 8px;
+        padding: 22px 26px;
+        margin: 18px 0;
+        font-size: 16pt;
+        line-height: 1.85;
+        color: #2c3e50;
+    }
+    .scenario-box p { margin: 0.5em 0; }
+
+    .prompt-box {
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        border-radius: 8px;
+        padding: 16px 22px;
+        margin: 16px 0;
+        font-size: 15pt;
+        color: #5d4037;
+    }
+
+    .progress-bar-wrap {
+        background: #e8e4f4;
+        border-radius: 6px;
+        height: 8px;
+        margin: 20px 0 8px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        background: linear-gradient(90deg, #5c4db1, #7b6fd4);
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.4s ease;
+    }
+    .progress-label {
+        font-size: 12pt;
+        color: #7a8a9a;
+        text-align: right;
+    }
+
+    .dim-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 20px 0;
+    }
+    .dim-card {
+        background: #faf9ff;
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        border: 1px solid #e4dff0;
+    }
+    .dim-card h4 { margin: 0 0 8px; font-size: 14pt; }
+    .dim-card p  { margin: 0; font-size: 12pt; color: #666; }
+
+    .role-select-btn {
+        display: block;
+        width: 100%;
+        max-width: 420px;
+        margin: 14px auto;
+        padding: 20px 24px;
+        font-size: 16pt;
+        text-align: left;
+        background: #fff;
+        border: 2px solid #e4dff0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #1a2332;
+        font-family: inherit;
+        line-height: 1.6;
+    }
+    .role-select-btn:hover {
+        border-color: #5c4db1;
+        background: #f5f3ff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(92,77,177,0.15);
+    }
+    .role-select-btn strong { display: block; font-size: 17pt; margin-bottom: 4px; }
+
+    textarea, input[type="text"] {
+        font-family: inherit;
+        font-size: 15pt;
+        line-height: 1.7;
+    }
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11pt;
+        margin-top: 16px;
+    }
+    .results-table th, .results-table td {
+        border: 1px solid #e4dff0;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .results-table th { background: #f0edf8; }
+    .results-table tr:nth-child(even) { background: #faf9ff; }
+</style>`;
+
+function randomID(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+const subID = randomID(8);
+let selectedRole = null;
+const allResponses = [];
+
+const DIMENSIONS = {
+    distributive:  { label: '分配公平', css: 'dim-distributive', desc: '奖学金、成绩、资源等分配是否公正合理' },
+    procedural:    { label: '程序公平', css: 'dim-procedural',   desc: '评选、评优、处分等决策过程是否公正透明' },
+    interactional: { label: '互动公平', css: 'dim-interactional', desc: '师生或同学间的对待方式是否尊重、诚恳与得体' }
+};
+
+const PERSPECTIVES = {
+    victim:      { label: '受害者视角', css: 'persp-victim' },
+    beneficiary: { label: '获利者视角', css: 'persp-beneficiary' },
+    bystander:   { label: '旁观者视角', css: 'persp-bystander' }
+};
+
+const SCENARIOS = {
+    participant: {
+        distributive: {
+            victim: {
+                title: '奖学金评定结果',
+                text: `<p>你是某高校大二学生。本学期学院评定励志奖学金，你与同班室友<strong>小林</strong>的综测成绩几乎相同——学业成绩都在班级前15%，社团活动和社会实践得分也相差无几。</p>
+                       <p>结果公布后，小林获得了一等奖学金（5000元），而你只拿到了三等奖（2000元），<strong>差距超过一倍</strong>。你反复核对了自己的综测明细，并未发现明显短板。</p>
+                       <p>辅导员在班级群里只发布了获奖名单，没有说明具体的评定标准和各项得分对比。</p>`
+            },
+            beneficiary: {
+                title: '小组作业成绩分配',
+                text: `<p>你是某高校大三学生。本学期一门专业必修课的小组期末报告由四人共同完成，你与同组同学<strong>小陈</strong>承担了几乎相同的工作量——你们都负责了核心章节的撰写和答辩准备，出勤和讨论参与度也一致。</p>
+                       <p>成绩公布后，你获得了92分，而小陈只有84分，<strong>相差8分</strong>。小陈在课后私信你说："咱们干的活差不多，怎么分差这么大？"</p>
+                       <p>你了解到，任课教师并没有向小组公开各成员的贡献评分依据，成绩是直接打到个人名下的。</p>`
+            },
+            bystander: {
+                title: '实验课仪器使用时间',
+                text: `<p>你是某高校化学专业大四学生。本周实验室的仪器使用时段由课题组统一分配。</p>
+                       <p>你观察到，同组的<strong>小周</strong>和<strong>小吴</strong>的实验进度、论文需求几乎一样紧迫，但小周被分配了整整两天的机时，小吴只分到了半天。差距非常悬殊。</p>
+                       <p>小吴在实验室里低声抱怨"太不公平了"，但负责分配的学长没有做出解释。你和其他同学都在场，气氛有些尴尬。</p>`
+            }
+        },
+        procedural: {
+            victim: {
+                title: '三好学生评选',
+                text: `<p>你是某高校大三学生，连续两年绩点保持在班级前10%，积极参与志愿服务和学科竞赛，自认为完全符合"三好学生"的评选条件。</p>
+                       <p>本学期评选结果公布，名额给了另一位成绩和综合表现与你相近的同学。你事后才得知，<strong>评选早在两周前就已经内部敲定了</strong>，你从未收到任何通知，也没有机会提交个人材料或进行陈述。</p>
+                       <p>班级群里没有任何关于评选标准、流程或候选人公示的信息，你只是在班长的通知里看到了最终结果。</p>`
+            },
+            beneficiary: {
+                title: '社团骨干选拔',
+                text: `<p>你是某高校大一学生，刚刚加入校学生会宣传部。本学期部门需要选拔新一届骨干，你意外地被任命为副部长。</p>
+                       <p>你后来得知，这次选拔是由现任部长<strong>单独决定的</strong>，没有进行公开报名，也没有公布选拔标准或候选人名单。几位与你同期加入、表现同样积极的部员事先并不知晓这次选拔。</p>
+                       <p>有人在部门群里质疑"为什么是他"，部长没有正面回应。你感到有些不安。</p>`
+            },
+            bystander: {
+                title: '宿舍调整方案',
+                text: `<p>你是某高校大二学生。本学期末，学院因宿舍楼维修需要调整部分学生的住宿安排。</p>
+                       <p>你目睹了以下过程：辅导员在班会上直接宣读了调整名单，<strong>没有提前征求学生意见</strong>，也<strong>没有说明分配标准和依据</strong>。被调整的同学<strong>小赵</strong>当场站起来问："为什么是我搬？标准是什么？"</p>
+                       <p>辅导员只是回答："这是学院安排，没有商量余地。"小赵红着眼眶坐下了，教室里一片沉默。</p>`
+            }
+        },
+        interactional: {
+            victim: {
+                title: '成绩复议遭到冷遇',
+                text: `<p>你是某高校大四学生。上学期一门专业课的期末成绩与你预期相差较大，你认为某道大题的评分可能有误，便预约了任课教师的答疑时间。</p>
+                       <p>你礼貌地展示了答题过程和参考文献，请老师重新审阅。老师翻了两页后，头也不抬地说：</p>
+                       <p><em>"大学不是高中，没有那么多分可以给你争。你这水平能考这个分就不错了，别总想着找老师要分。"</em></p>
+                       <p>他没有针对你的具体疑问做任何解释，随后看了看手表，示意你离开。走廊里还有其他等待答疑的同学。</p>`
+            },
+            beneficiary: {
+                title: '课堂提问中的区别对待',
+                text: `<p>你是某高校大三学生。今天的专业课上，老师点名让你回答一个难题，你顺利给出了正确答案，获得了老师的肯定。</p>
+                       <p>随后老师转向你的同学<strong>小刘</strong>，问她一个类似的问题。小刘回答得不够完整，老师当着全班同学说：</p>
+                       <p><em>"你怎么连这个都不会？平时都在干什么？多向人家学学。"</em></p>
+                       <p>小刘低下头不再说话，教室里鸦雀无声。你获得了表扬，但感到很不舒服，注意到周围同学的目光。</p>`
+            },
+            bystander: {
+                title: '班会上当众批评',
+                text: `<p>你是某高校大二学生。在周二的班会上，辅导员通报本学期班级考勤情况。</p>
+                       <p>辅导员当着全班五十多名同学的面，点名批评<strong>小杨</strong>迟到次数最多，语气严厉：</p>
+                       <p><em>"小杨，你本学期迟到11次，是全年级最多的。我对你的态度非常失望，你再这样就别想评任何奖了！"</em></p>
+                       <p>小杨坐在座位上，脸涨得通红，没有辩解的机会。辅导员批评完接着讲下一项议程，班里鸦雀无声，没有人出声。</p>`
+            }
+        }
+    },
+    dominator: {
+        distributive: {
+            victim: {
+                title: '奖学金分配引发质疑',
+                text: `<p>你是某高校大二班级的<strong>班长</strong>，协助辅导员完成了本学期的奖学金评定工作。评定结果已在班级群公布。</p>
+                       <p>同学<strong>小周</strong>课后找到你，情绪激动地表示不满：他与室友小林综测成绩几乎相同，但小林拿了一等奖学金，自己只有三等奖，<strong>差距超过一倍</strong>。他认为评定有失公允，并出示了详细的综测对比表。</p>
+                       <p>小周态度虽然激动，但措辞总体克制，等待你的回应。你知道评定过程中确实存在一些模糊地带。</p>`
+            },
+            beneficiary: {
+                title: '活动经费分配引关注',
+                text: `<p>你是某高校学生会某部门的<strong>部长</strong>。你刚刚完成了本学期部门活动经费的分配，将大部分预算拨给了干事<strong>小孙</strong>负责的项目。</p>
+                       <p>小孙与其他干事的工作量和项目规模大致相当，但他获得的经费高出约40%。这一差异引起了部门内的议论。</p>
+                       <p>小孙私下找到你，表示他注意到分配差距较大，询问是否需要向部门做出说明。其他干事尚未直接找你，但你能感觉到不满的情绪在蔓延。</p>`
+            },
+            bystander: {
+                title: '综测加分引发争议',
+                text: `<p>你是某高校大三班级的<strong>学习委员</strong>，负责汇总和公示班级综测成绩。你刚刚完成了本学期的综测核算并发布了结果。</p>
+                       <p>班上<strong>小赵</strong>和<strong>小陈</strong>的学业成绩、活动加分几乎持平，但最终综测总分小赵比小陈高了近5分，主要差在"德育加分"一项。这一差距直接影响了奖学金评定。</p>
+                       <p>小赵在班群里公开质疑加分标准，小陈保持沉默但神情沮丧。其他同学也在私下议论。作为负责核算的你，需要面对这一局面。</p>`
+            }
+        },
+        procedural: {
+            victim: {
+                title: '评优决定遭到质疑',
+                text: `<p>你是某高校大三班级的<strong>班长</strong>。你刚刚在班会上公布了本学期"三好学生"的评选结果，名额给了同学A，而非同学B。</p>
+                       <p>同学B（连续两年绩点班级前10%）课后找到你，表示自己完全<strong>不知情</strong>有这次评选，也<strong>没有机会</strong>提交材料和陈述。他质疑评选过程缺乏透明度和参与性。</p>
+                       <p>事实上，这次评选主要由你和辅导员根据日常印象商定，没有进行公开报名，也未发布评选标准和流程。</p>`
+            },
+            beneficiary: {
+                title: '骨干任命引发议论',
+                text: `<p>你是某高校校学生会宣传部的<strong>部长</strong>。你刚刚确定了新一届部门骨干名单，任命<strong>小赵</strong>为副部长。</p>
+                       <p>选拔由你单独决定，没有公开报名，也未公布选拔标准。几位与小赵同期加入、表现同样积极的部员事先并不知晓。</p>
+                       <p>任命通知发布后，部门群里出现了质疑声。小赵私下向你表示，他担心这一任命"可能引起部员不满"，询问是否需要做些什么。</p>`
+            },
+            bystander: {
+                title: '宿舍调整遭遇抵触',
+                text: `<p>你是某高校某学院的<strong>辅导员助理</strong>。学院因宿舍楼维修需要调整部分学生住宿，你协助辅导员拟定了调整名单。</p>
+                       <p>在班会上宣读名单时，被调整的同学<strong>小赵</strong>当场质问："为什么是我搬？标准是什么？"</p>
+                       <p>名单主要由你和辅导员根据宿舍位置、年级等因素拟定，<strong>未提前征求学生意见</strong>，也<strong>未公布调整标准</strong>。教室里气氛紧张，所有人都在等待回应。</p>`
+            }
+        },
+        interactional: {
+            victim: {
+                title: '同学申诉待你回应',
+                text: `<p>你是某高校大二班级的<strong>班长</strong>。同学<strong>小吴</strong>因为你上周在班会上通报考勤时点名批评了他（迟到11次），现在前来找你谈话。</p>
+                       <p>小吴认为自己在路上帮同学搬东西导致迟到，情有可原，且当众点名让他"很没面子"。他态度诚恳，希望你能向辅导员反映情况或澄清。</p>
+                       <p>你当时是按照辅导员要求通报的，但你也意识到当众批评的方式可能过于严厉。小吴坐在你对面，等待你的回应。</p>`
+            },
+            beneficiary: {
+                title: '课堂表扬后的尴尬',
+                text: `<p>你是某高校大三学生，同时担任本专业<strong>课程助教</strong>。在今天的习题课上，你回答问题时获得了任课教师的公开表扬。</p>
+                       <p>随后老师批评了回答不正确的同学小刘，说"多向人家学学"，语气让全班尴尬。小刘沉默不语，课后没有说话就离开了教室。</p>
+                       <p>课间，小刘的室友私下告诉你，小刘觉得"很丢脸"。你获得了表扬，但感到气氛不对，也在犹豫是否该做些什么。</p>`
+            },
+            bystander: {
+                title: '批评同学后的余波',
+                text: `<p>你是某高校大二班级的<strong>班长</strong>。在刚才的班会上，你按照辅导员要求通报了考勤情况，并当众点名批评了迟到最多的同学<strong>小杨</strong>，措辞较为严厉。</p>
+                       <p>小杨红着脸低下头，没有辩解。会后教室里气氛沉闷，几个同学看你的眼神有些异样，小杨的室友也在走廊里低声议论。</p>
+                       <p>辅导员后来发消息说"通报得好"，但你能感觉到同学们对你的态度似乎有所变化。小杨一直没有主动和你说话。</p>`
+            }
+        }
+    }
+};
+
+const DIM_ORDER = ['distributive', 'procedural', 'interactional'];
+const PERSP_ORDER = ['victim', 'beneficiary', 'bystander'];
+
+function buildScenarioList(role) {
+    const list = [];
+    for (const dim of DIM_ORDER) {
+        for (const persp of PERSP_ORDER) {
+            const s = SCENARIOS[role][dim][persp];
+            list.push({ dim, persp, title: s.title, text: s.text });
+        }
+    }
+    return list;
+}
+
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+const jsPsych = initJsPsych({
+    on_finish: function() { displayResults(); }
+});
+
+let timeline = [];
+
+const welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">校园公平情境想象任务</div>
+        <div class="page-subtitle">Campus Fairness Scenario Imagination Task</div>
+        <p>本任务将呈现一系列与<strong>大学生活</strong>密切相关的公平情境，涵盖奖学金评定、课程成绩、社团选拔、宿舍安排等常见场景。请仔细阅读每个场景，想象自己身处其中，然后描述<strong>您认为自己会采取的行为</strong>。</p>
+
+        <div class="dim-grid">
+            <div class="dim-card">
+                <h4 style="color:#1565c0;">分配公平</h4>
+                <p>奖学金、成绩、资源等分配是否公正合理</p>
+            </div>
+            <div class="dim-card">
+                <h4 style="color:#2e7d32;">程序公平</h4>
+                <p>评选、评优、调整等决策过程是否公正透明</p>
+            </div>
+            <div class="dim-card">
+                <h4 style="color:#c62828;">互动公平</h4>
+                <p>师生、同学间的对待方式是否尊重与得体</p>
+            </div>
+        </div>
+
+        <p>每个情境将从三种<strong>视角</strong>呈现：</p>
+        <p>
+            <span class="persp-badge persp-victim">受害者视角</span> 利益受损的一方 &nbsp;
+            <span class="persp-badge persp-beneficiary">获利者视角</span> 相对获益的一方 &nbsp;
+            <span class="persp-badge persp-bystander">旁观者视角</span> 在场但未直接受影响的一方
+        </p>
+
+        <p style="margin-top:20px;">实验编号：<strong>${subID}</strong></p>
+        <p style="text-align:center; margin-top:28px; color:#5c4db1;"><strong>按任意键继续</strong></p>
+    </div>`
+};
+
+const instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">指导语</div>
+        <p><strong>1. 角色选择</strong><br>接下来，您将选择（或由系统分配）一种角色：</p>
+        <p>
+            <span class="role-badge role-participant">参与者</span> 普通大学生，作为学生体验或目睹校园中的公平情境<br>
+            <span class="role-badge role-dominator">支配者</span> 拥有一定决定权的学生干部（班长、部长、助教等），面对同学诉求或决策后果
+        </p>
+        <p><strong>2. 情境阅读</strong><br>共 9 个情境，涵盖三种公平维度与三种视角，场景均取材于大学生活。请尽量将自己<strong>代入场景</strong>，想象真实情况。</p>
+        <p><strong>3. 行为描述</strong><br>每个情境后，请用<strong>自己的语言</strong>详细描述：如果您身处该情境，<strong>您会怎么做？</strong>可以包括具体行动、说什么话、情绪反应和后续计划。</p>
+        <p><strong>4. 注意事项</strong></p>
+        <ul>
+            <li>没有标准答案，请根据真实想法作答</li>
+            <li>每个情境至少写 2-3 句话</li>
+            <li>请独立完成，不要与他人讨论</li>
+        </ul>
+        <p style="text-align:center; margin-top:28px; color:#5c4db1;"><strong>按任意键选择角色</strong></p>
+    </div>`
+};
+
+timeline.push(welcome, instructions);
+
+const roleSelection = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">请选择您的角色</div>
+        <p style="text-align:center; color:#6a5d8a;">选择后，所有情境将以此角色视角呈现</p>
+    </div>`,
+    choices: ['__role_participant__', '__role_dominator__', '__role_random__'],
+    button_html: [
+        `<button class="role-select-btn">
+            <strong>🎓 参与者</strong>
+            您是普通大学生，体验奖学金、成绩、社团等校园情境中的公平或不公
+        </button>`,
+        `<button class="role-select-btn">
+            <strong>📋 支配者</strong>
+            您是班长、社团干部或助教等，拥有一定决定权，面对同学的质疑或决策后的局面
+        </button>`,
+        `<button class="role-select-btn">
+            <strong>🎲 随机分配</strong>
+            由系统随机决定您的角色（参与者或支配者）
+        </button>`
+    ],
+    on_finish: function(data) {
+        const choice = data.response;
+        if (choice === 0) selectedRole = 'participant';
+        else if (choice === 1) selectedRole = 'dominator';
+        else selectedRole = Math.random() < 0.5 ? 'participant' : 'dominator';
+        data.assigned_role = selectedRole;
+    }
+};
+
+timeline.push(roleSelection);
+
+const roleConfirm = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+        const roleLabel = selectedRole === 'participant' ? '参与者' : '支配者';
+        const roleDesc = selectedRole === 'participant'
+            ? '您将以<strong>普通大学生</strong>的身份，经历或目睹校园中的公平情境。'
+            : '您将以<strong>学生干部</strong>的身份，面对分配决策、评选结果或同学诉求。';
+        const roleCss = selectedRole === 'participant' ? 'role-participant' : 'role-dominator';
+        return `
+        <div class="page-card" style="text-align:center;">
+            <p>您的角色已确定：</p>
+            <span class="role-badge ${roleCss}" style="font-size:18pt; padding:10px 24px;">${roleLabel}</span>
+            <p style="margin-top:20px;">${roleDesc}</p>
+            <p>接下来将呈现 <strong>9 个校园情境</strong>，请逐一阅读并作答。</p>
+            <p style="margin-top:28px; color:#5c4db1;"><strong>按任意键开始</strong></p>
+        </div>`;
+    }
+};
+
+timeline.push(roleConfirm);
+
+function buildScenarioTrials(role) {
+    const scenarios = shuffleArray(buildScenarioList(role));
+    const trials = [];
+
+    scenarios.forEach(function(sc, idx) {
+        const dimInfo = DIMENSIONS[sc.dim];
+        const perspInfo = PERSPECTIVES[sc.persp];
+        const total = scenarios.length;
+        const current = idx + 1;
+        const pct = Math.round((current / total) * 100);
+
+        trials.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+            <div class="page-card">
+                <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+                <div class="progress-label">情境 ${current} / ${total}</div>
+
+                <span class="dim-badge ${dimInfo.css}">${dimInfo.label}</span>
+                <span class="persp-badge ${perspInfo.css}">${perspInfo.label}</span>
+
+                <h3 style="margin:14px 0 6px; font-size:18pt; color:#3d2e7a;">${sc.title}</h3>
+
+                <div class="scenario-box">${sc.text}</div>
+
+                <div class="prompt-box">
+                    💭 请想象您正处于上述校园情境中。<strong>仔细阅读后，在下一页描述您认为自己会采取的行为。</strong>
+                </div>
+
+                <p style="text-align:center; margin-top:20px; color:#5c4db1;"><strong>按任意键继续作答</strong></p>
+            </div>`,
+            data: {
+                phase: 'scenario_read',
+                dimension: sc.dim,
+                perspective: sc.persp,
+                scenario_title: sc.title,
+                trial_index: current
+            }
+        });
+
+        trials.push({
+            type: jsPsychSurveyText,
+            questions: [{
+                prompt: `<div style="margin-bottom:12px;">
+                    <span class="dim-badge ${dimInfo.css}">${dimInfo.label}</span>
+                    <span class="persp-badge ${perspInfo.css}">${perspInfo.label}</span>
+                    <strong style="margin-left:8px;">${sc.title}</strong>
+                </div>
+                <p>请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
+                <p style="font-size:13pt; color:#777;">（可包括具体行动、说什么话、情绪和后续打算，至少2-3句话）</p>`,
+                rows: 8,
+                columns: 70,
+                name: 'behavior_response',
+                required: true
+            }],
+            button_label: '提交并继续',
+            data: {
+                phase: 'behavior_response',
+                dimension: sc.dim,
+                perspective: sc.persp,
+                scenario_title: sc.title,
+                trial_index: current
+            },
+            on_finish: function(data) {
+                const resp = JSON.parse(data.responses);
+                allResponses.push({
+                    trial_index: current,
+                    dimension: sc.dim,
+                    dimension_label: dimInfo.label,
+                    perspective: sc.persp,
+                    perspective_label: perspInfo.label,
+                    scenario_title: sc.title,
+                    behavior: resp.behavior_response
+                });
+            }
+        });
+    });
+
+    return trials;
+}
+
+const scenarioBlock = {
+    timeline: function() {
+        jsPsych.data.addProperties({ subject_id: subID, role: selectedRole, version: 'college' });
+        return buildScenarioTrials(selectedRole);
+    }
+};
+
+timeline.push(scenarioBlock);
+
+jsPsych.run(timeline);
+
+function displayResults() {
+    const roleLabel = selectedRole === 'participant' ? '参与者' : '支配者';
+    const timestamp = new Date().toLocaleString('zh-CN');
+
+    let tableRows = '';
+    allResponses.forEach(function(r) {
+        tableRows += `<tr>
+            <td>${r.trial_index}</td>
+            <td>${r.dimension_label}</td>
+            <td>${r.perspective_label}</td>
+            <td>${r.scenario_title}</td>
+            <td>${escapeHtml(r.behavior)}</td>
+        </tr>`;
+    });
+
+    const exportData = {
+        subject_id: subID,
+        version: 'college',
+        role: selectedRole,
+        role_label: roleLabel,
+        timestamp: timestamp,
+        responses: allResponses
+    };
+
+    document.body.innerHTML = `
+    <div class="page-card" style="max-width:1000px; margin:30px auto;">
+        <div class="page-title">实验完成</div>
+        <p style="text-align:center;">感谢您的参与！</p>
+        <p>被试编号：<strong>${subID}</strong> &nbsp;|&nbsp; 版本：<strong>大学生活</strong> &nbsp;|&nbsp; 角色：<strong>${roleLabel}</strong> &nbsp;|&nbsp; 完成时间：${timestamp}</p>
+
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>公平维度</th>
+                    <th>视角</th>
+                    <th>情境</th>
+                    <th>您的行为描述</th>
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+
+        <div style="text-align:center; margin-top:28px;">
+            <button class="jspsych-btn" onclick="downloadJSON()">下载 JSON 数据</button>
+            <button class="jspsych-btn" onclick="downloadCSV()">下载 CSV 数据</button>
+        </div>
+    </div>`;
+
+    window._exportData = exportData;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function downloadJSON() {
+    const blob = new Blob([JSON.stringify(window._exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fairness_college_${subID}_${selectedRole}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadCSV() {
+    const d = window._exportData;
+    const header = ['subject_id', 'version', 'role', 'trial_index', 'dimension', 'perspective', 'scenario_title', 'behavior'];
+    const rows = d.responses.map(function(r) {
+        return [d.subject_id, d.version, d.role, r.trial_index, r.dimension_label, r.perspective_label,
+                '"' + r.scenario_title.replace(/"/g, '""') + '"',
+                '"' + r.behavior.replace(/"/g, '""') + '"'].join(',');
+    });
+    const csv = '\uFEFF' + header.join(',') + '\n' + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fairness_college_${subID}_${selectedRole}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+</script>
+</html>
