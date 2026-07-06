@@ -186,6 +186,19 @@ document.head.innerHTML += `
         font-family: inherit;
         font-size: 15pt;
         line-height: 1.7;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    #jspsych-survey-text-form { max-width: 100%; }
+    .jspsych-survey-text-preamble { margin-bottom: 0; }
+    .jspsych-survey-text-question { margin-top: 12px; }
+    .jspsych-survey-text textarea {
+        min-height: 140px;
+        padding: 12px 14px;
+        border: 1px solid #dde4ec;
+        border-radius: 8px;
+        resize: vertical;
     }
     .results-table {
         width: 100%;
@@ -433,7 +446,7 @@ const instructions = {
             <span class="role-badge role-dominator">支配者</span> 拥有决策权和资源分配权的管理者
         </p>
         <p><strong>2. 情境阅读</strong><br>共 9 个情境，涵盖三种公平维度与三种视角。请尽量将自己<strong>代入场景</strong>，想象真实情况。</p>
-        <p><strong>3. 行为描述</strong><br>每个情境后，请用<strong>自己的语言</strong>详细描述：如果您身处该情境，<strong>您会怎么做？</strong>可以包括具体行动、沟通方式、情绪反应和后续计划。</p>
+        <p><strong>3. 行为描述</strong><br>每个情境的场景描述与作答框在<strong>同一页面</strong>呈现。请阅读场景后，在下方空白框中用<strong>自己的语言</strong>详细描述：如果您身处该情境，<strong>您会怎么做？</strong>可以包括具体行动、沟通方式、情绪反应和后续计划。</p>
         <p><strong>4. 注意事项</strong></p>
         <ul>
             <li>没有标准答案，请根据真实想法作答</li>
@@ -516,9 +529,9 @@ function buildScenarioTrials(role) {
         const pct = Math.round((current / total) * 100);
 
         trials.push({
-            type: jsPsychHtmlKeyboardResponse,
-            stimulus: `
-            <div class="page-card">
+            type: jsPsychSurveyText,
+            preamble: `
+            <div class="page-card" style="box-shadow:none; padding:0; margin:0;">
                 <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
                 <div class="progress-label">情境 ${current} / ${total}</div>
 
@@ -530,38 +543,20 @@ function buildScenarioTrials(role) {
                 <div class="scenario-box">${sc.text}</div>
 
                 <div class="prompt-box">
-                    💭 请想象您正处于上述情境中。<strong>仔细阅读后，在下一页描述您认为自己会采取的行为。</strong>
+                    💭 请想象您正处于上述情境中，然后在<strong>下方空白框</strong>描述您认为自己会采取的行为。
                 </div>
-
-                <p style="text-align:center; margin-top:20px; color:#2d6a9f;"><strong>按任意键继续作答</strong></p>
             </div>`,
-            data: {
-                phase: 'scenario_read',
-                dimension: sc.dim,
-                perspective: sc.persp,
-                scenario_title: sc.title,
-                trial_index: current
-            }
-        });
-
-        trials.push({
-            type: jsPsychSurveyText,
             questions: [{
-                prompt: `<div style="margin-bottom:12px;">
-                    <span class="dim-badge ${dimInfo.css}">${dimInfo.label}</span>
-                    <span class="persp-badge ${perspInfo.css}">${perspInfo.label}</span>
-                    <strong style="margin-left:8px;">${sc.title}</strong>
-                </div>
-                <p>请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
-                <p style="font-size:13pt; color:#777;">（可包括具体行动、说什么话、情绪和后续打算，至少2-3句话）</p>`,
-                rows: 8,
+                prompt: `<p style="margin:0 0 8px;">请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
+                         <p style="font-size:13pt; color:#777; margin:0;">（可包括具体行动、说什么话、情绪和后续打算，至少2-3句话）</p>`,
+                rows: 6,
                 columns: 70,
                 name: 'behavior_response',
                 required: true
             }],
             button_label: '提交并继续',
             data: {
-                phase: 'behavior_response',
+                phase: 'scenario_response',
                 dimension: sc.dim,
                 perspective: sc.persp,
                 scenario_title: sc.title,
