@@ -738,12 +738,15 @@ function exportData() {
 function createScenarioTrials(scenario, index, total) {
     const trials = [];
     const isAdaptive = !SCENARIO_POOL[scenario.id];
+    const scenarioRecord = {};
 
     const choiceTrial = {
         type: jsPsychHtmlButtonResponse,
         stimulus: buildScenarioHTML(scenario, index, total),
         choices: scenario.choices.map(c => c.text),
-        button_html: '<button class="jspsych-btn choice-btn">%choice%</button>',
+        button_html: function(choice) {
+            return '<button class="jspsych-btn choice-btn">' + choice + '</button>';
+        },
         data: {
             trial_type: 'scenario_choice',
             scenario_id: scenario.id,
@@ -756,6 +759,9 @@ function createScenarioTrials(scenario, index, total) {
         on_finish: function(data) {
             const choiceIdx = data.response;
             const choice = scenario.choices[choiceIdx];
+            scenarioRecord.choiceKey = choice.key;
+            scenarioRecord.choiceText = choice.text;
+            scenarioRecord.rt_choice = data.rt;
             data.choice_key = choice.key;
             data.choice_text = choice.text;
             data.choice_tags = choice.tags;
@@ -764,8 +770,9 @@ function createScenarioTrials(scenario, index, total) {
     };
     trials.push(choiceTrial);
 
-    const likertQuestions = scenario.ratings.map(label => ({
+    const likertQuestions = scenario.ratings.map((label, i) => ({
         prompt: label,
+        name: 'Q' + i,
         labels: ['1<br>极不公平', '2', '3<br>一般', '4', '5<br>极公平'],
         required: true
     }));
@@ -784,8 +791,11 @@ function createScenarioTrials(scenario, index, total) {
         on_finish: function(data) {
             const ratings = {};
             scenario.ratings.forEach((label, i) => {
-                ratings[label] = parseInt(data.response[i]) + 1;
+                const val = data.response['Q' + i];
+                ratings[label] = parseInt(val, 10) + 1;
             });
+            scenarioRecord.fairnessRatings = ratings;
+            scenarioRecord.rt_rating = data.rt;
             data.fairness_ratings = ratings;
         }
     };
@@ -794,7 +804,7 @@ function createScenarioTrials(scenario, index, total) {
     const textTrial = {
         type: jsPsychSurveyText,
         questions: [
-            { prompt: '请用自己的话描述：你为什么会做出刚才的选择？你认为怎样做才算是"公平"的？', rows: 4, columns: 60, required: true }
+            { prompt: '请用自己的话描述：你为什么会做出刚才的选择？你认为怎样做才算是"公平"的？', name: 'Q0', rows: 4, columns: 60, required: true }
         ],
         data: {
             trial_type: 'scenario_text',
@@ -802,16 +812,8 @@ function createScenarioTrials(scenario, index, total) {
             scenario_index: index
         },
         on_finish: function(data) {
-            data.text_response = data.response['0'];
-
-            const choiceData = jsPsych.data.get().filter({
-                trial_type: 'scenario_choice',
-                scenario_id: scenario.id
-            }).last(1).values()[0];
-            const ratingData = jsPsych.data.get().filter({
-                trial_type: 'scenario_rating',
-                scenario_id: scenario.id
-            }).last(1).values()[0];
+            const textResponse = data.response.Q0 || Object.values(data.response)[0];
+            data.text_response = textResponse;
 
             gameState.responses.push({
                 subjectID: gameState.subjectID,
@@ -821,12 +823,12 @@ function createScenarioTrials(scenario, index, total) {
                 perspective: scenario.perspective,
                 role: scenario.role,
                 isAdaptive: isAdaptive,
-                choiceKey: choiceData.choice_key,
-                choiceText: choiceData.choice_text,
-                fairnessRatings: ratingData.fairness_ratings,
-                textResponse: data.text_response,
-                rt_choice: choiceData.rt,
-                rt_rating: ratingData.rt,
+                choiceKey: scenarioRecord.choiceKey,
+                choiceText: scenarioRecord.choiceText,
+                fairnessRatings: scenarioRecord.fairnessRatings,
+                textResponse: textResponse,
+                rt_choice: scenarioRecord.rt_choice,
+                rt_rating: scenarioRecord.rt_rating,
                 rt_text: data.rt,
                 timestamp: new Date().toISOString()
             });
@@ -836,6 +838,13 @@ function createScenarioTrials(scenario, index, total) {
 
     return trials;
 }
+
+// ---------- 初始化 jsPsych ----------
+const jsPsych = initJsPsych({
+    on_finish: function() {
+        // 实验结束
+    }
+});
 
 // ---------- 主实验流程 ----------
 const finalTimeline = [];
@@ -864,11 +873,11 @@ finalTimeline.push({
 finalTimeline.push({
     type: jsPsychSurveyText,
     questions: [
-        { prompt: '请输入您的被试编号（Subject ID）：', required: true, rows: 1, columns: 30 }
+        { prompt: '请输入您的被试编号（Subject ID）：', name: 'subjectID', required: true, rows: 1, columns: 30 }
     ],
     data: { trial_type: 'subject_id' },
     on_finish: function(data) {
-        gameState.subjectID = data.response['0'].trim() || 'unknown';
+        gameState.subjectID = (data.response.subjectID || '').trim() || 'unknown';
         jsPsych.data.addProperties({ subjectID: gameState.subjectID });
     }
 });
@@ -893,32 +902,148 @@ finalTimeline.push({
     choices: [' ']
 });
 
-const initialQueue = buildInitialQueue();
-for (let i = 0; i < 3; i++) {
-    finalTimeline.push(...createScenarioTrials(initialQueue[i], i + 1, TOTAL_SCENARIOS));
-}
-
 finalTimeline.push({
     type: jsPsychCallFunction,
     func: function() {
-        const adaptiveScenarios = selectAdaptiveScenarios(5);
-        const adaptiveTimeline = [];
-        for (let i = 0; i < adaptiveScenarios.length; i++) {
-            adaptiveTimeline.push(...createScenarioTrials(adaptiveScenarios[i], 4 + i, TOTAL_SCENARIOS));
-        }
-        adaptiveTimeline.push({
-            type: jsPsychHtmlKeyboardResponse,
-            stimulus: function() {
-                return buildProfileSummary();
-            },
-            choices: [' '],
-            on_finish: function() {
-                exportData();
-            },
-            data: { trial_type: 'debrief' }
-        });
-        jsPsych.addNodeToEndOfTimeline({ timeline: adaptiveTimeline });
+        gameState.scenarioQueue = buildInitialQueue();
+        gameState.scenarioPtr = 0;
+        gameState.adaptiveLoaded = false;
+        gameState.currentRecord = {};
     }
+});
+
+const scenarioLoop = {
+    timeline: [
+        {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: function() {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                return buildScenarioHTML(scenario, gameState.scenarioPtr + 1, TOTAL_SCENARIOS);
+            },
+            choices: function() {
+                return gameState.scenarioQueue[gameState.scenarioPtr].choices.map(function(c) { return c.text; });
+            },
+            button_html: function(choice) {
+                return '<button class="jspsych-btn choice-btn">' + choice + '</button>';
+            },
+            data: function() {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                return {
+                    trial_type: 'scenario_choice',
+                    scenario_id: scenario.id,
+                    dimension: scenario.dimension,
+                    perspective: scenario.perspective,
+                    role: scenario.role,
+                    is_adaptive: !SCENARIO_POOL[scenario.id],
+                    scenario_index: gameState.scenarioPtr + 1
+                };
+            },
+            on_finish: function(data) {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                const choice = scenario.choices[data.response];
+                gameState.currentRecord = {
+                    choiceKey: choice.key,
+                    choiceText: choice.text,
+                    rt_choice: data.rt
+                };
+                updateProfile(choice.tags);
+            }
+        },
+        {
+            type: jsPsychSurveyLikert,
+            preamble: `<div class="game-container">
+                <div class="rating-prompt">请对刚才的情境进行公平性评分（1 = 极不公平，5 = 极公平）</div>
+            </div>`,
+            questions: function() {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                return scenario.ratings.map(function(label, i) {
+                    return {
+                        prompt: label,
+                        name: 'Q' + i,
+                        labels: ['1<br>极不公平', '2', '3<br>一般', '4', '5<br>极公平'],
+                        required: true
+                    };
+                });
+            },
+            data: function() {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                return {
+                    trial_type: 'scenario_rating',
+                    scenario_id: scenario.id,
+                    scenario_index: gameState.scenarioPtr + 1
+                };
+            },
+            on_finish: function(data) {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                const ratings = {};
+                scenario.ratings.forEach(function(label, i) {
+                    ratings[label] = parseInt(data.response['Q' + i], 10) + 1;
+                });
+                gameState.currentRecord.fairnessRatings = ratings;
+                gameState.currentRecord.rt_rating = data.rt;
+            }
+        },
+        {
+            type: jsPsychSurveyText,
+            questions: [
+                { prompt: '请用自己的话描述：你为什么会做出刚才的选择？你认为怎样做才算是"公平"的？', name: 'Q0', rows: 4, columns: 60, required: true }
+            ],
+            data: function() {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                return {
+                    trial_type: 'scenario_text',
+                    scenario_id: scenario.id,
+                    scenario_index: gameState.scenarioPtr + 1
+                };
+            },
+            on_finish: function(data) {
+                const scenario = gameState.scenarioQueue[gameState.scenarioPtr];
+                const textResponse = data.response.Q0 || Object.values(data.response)[0];
+                const isAdaptive = !SCENARIO_POOL[scenario.id];
+
+                gameState.responses.push({
+                    subjectID: gameState.subjectID,
+                    scenarioIndex: gameState.scenarioPtr + 1,
+                    scenarioId: scenario.id,
+                    dimension: scenario.dimension,
+                    perspective: scenario.perspective,
+                    role: scenario.role,
+                    isAdaptive: isAdaptive,
+                    choiceKey: gameState.currentRecord.choiceKey,
+                    choiceText: gameState.currentRecord.choiceText,
+                    fairnessRatings: gameState.currentRecord.fairnessRatings,
+                    textResponse: textResponse,
+                    rt_choice: gameState.currentRecord.rt_choice,
+                    rt_rating: gameState.currentRecord.rt_rating,
+                    rt_text: data.rt,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+    ],
+    loop_function: function() {
+        gameState.scenarioPtr++;
+        if (gameState.scenarioPtr === 3 && !gameState.adaptiveLoaded) {
+            gameState.scenarioQueue = gameState.scenarioQueue.concat(selectAdaptiveScenarios(5));
+            gameState.adaptiveLoaded = true;
+        }
+        gameState.currentRecord = {};
+        return gameState.scenarioPtr < gameState.scenarioQueue.length;
+    }
+};
+
+finalTimeline.push(scenarioLoop);
+
+finalTimeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+        return buildProfileSummary();
+    },
+    choices: [' '],
+    on_finish: function() {
+        exportData();
+    },
+    data: { trial_type: 'debrief' }
 });
 
 jsPsych.run(finalTimeline);
