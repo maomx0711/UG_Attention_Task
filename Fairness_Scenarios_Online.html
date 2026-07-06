@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>组织公平情境想象任务</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+</head>
+<body></body>
+
+<script>
+document.head.innerHTML += `
+<style>
+    body {
+        user-select: none;
+        -webkit-user-select: none;
+        background: linear-gradient(160deg, #f0f4f8 0%, #e8eef5 100%);
+        color: #1a2332;
+        font-size: 17pt;
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+        line-height: 1.75;
+        min-height: 100vh;
+    }
+    .jspsych-content-wrapper { max-width: 960px; }
+    .jspsych-btn {
+        font-size: 15pt;
+        font-family: inherit;
+        margin: 0.6em 0.3em;
+        padding: 12px 28px;
+        border-radius: 8px;
+        background: #2d6a9f;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .jspsych-btn:hover { background: #1f5580; }
+    .jspsych-btn:disabled { background: #aab4c0; cursor: not-allowed; }
+
+    .page-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 36px 42px;
+        box-shadow: 0 4px 24px rgba(30, 60, 90, 0.10);
+        text-align: left;
+        margin: 0 auto;
+    }
+    .page-title {
+        font-size: 26pt;
+        font-weight: 700;
+        color: #1a3a5c;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .page-subtitle {
+        font-size: 14pt;
+        color: #5a6d82;
+        text-align: center;
+        margin-bottom: 28px;
+    }
+    .dim-badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 12pt;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    .dim-distributive { background: #e3f2fd; color: #1565c0; }
+    .dim-procedural   { background: #e8f5e9; color: #2e7d32; }
+    .dim-interactional{ background: #fce4ec; color: #c62828; }
+
+    .persp-badge {
+        display: inline-block;
+        padding: 3px 12px;
+        border-radius: 6px;
+        font-size: 11pt;
+        font-weight: 600;
+        margin-left: 8px;
+        background: #f5f5f5;
+        color: #555;
+    }
+    .persp-victim      { border-left: 3px solid #e53935; }
+    .persp-beneficiary { border-left: 3px solid #43a047; }
+    .persp-bystander   { border-left: 3px solid #fb8c00; }
+
+    .role-badge {
+        display: inline-block;
+        padding: 5px 16px;
+        border-radius: 8px;
+        font-size: 13pt;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+    .role-participant { background: #e8eaf6; color: #283593; }
+    .role-dominator   { background: #fff3e0; color: #e65100; }
+
+    .scenario-box {
+        background: #f8fafc;
+        border: 1px solid #dde4ec;
+        border-left: 5px solid #2d6a9f;
+        border-radius: 8px;
+        padding: 22px 26px;
+        margin: 18px 0;
+        font-size: 16pt;
+        line-height: 1.85;
+        color: #2c3e50;
+    }
+    .scenario-box p { margin: 0.5em 0; }
+
+    .prompt-box {
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        border-radius: 8px;
+        padding: 16px 22px;
+        margin: 16px 0;
+        font-size: 15pt;
+        color: #5d4037;
+    }
+
+    .progress-bar-wrap {
+        background: #e0e6ed;
+        border-radius: 6px;
+        height: 8px;
+        margin: 20px 0 8px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        background: linear-gradient(90deg, #2d6a9f, #4a9fd4);
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.4s ease;
+    }
+    .progress-label {
+        font-size: 12pt;
+        color: #7a8a9a;
+        text-align: right;
+    }
+
+    .dim-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 20px 0;
+    }
+    .dim-card {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        border: 1px solid #e0e6ed;
+    }
+    .dim-card h4 { margin: 0 0 8px; font-size: 14pt; }
+    .dim-card p  { margin: 0; font-size: 12pt; color: #666; }
+
+    .role-select-btn {
+        display: block;
+        width: 100%;
+        max-width: 420px;
+        margin: 14px auto;
+        padding: 20px 24px;
+        font-size: 16pt;
+        text-align: left;
+        background: #fff;
+        border: 2px solid #dde4ec;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #1a2332;
+        font-family: inherit;
+        line-height: 1.6;
+    }
+    .role-select-btn:hover {
+        border-color: #2d6a9f;
+        background: #f0f7ff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(45,106,159,0.15);
+    }
+    .role-select-btn strong { display: block; font-size: 17pt; margin-bottom: 4px; }
+
+    textarea, input[type="text"] {
+        font-family: inherit;
+        font-size: 15pt;
+        line-height: 1.7;
+    }
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11pt;
+        margin-top: 16px;
+    }
+    .results-table th, .results-table td {
+        border: 1px solid #dde4ec;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .results-table th { background: #eef3f8; }
+    .results-table tr:nth-child(even) { background: #fafbfc; }
+</style>`;
+
+function randomID(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+const subID = randomID(8);
+let selectedRole = null;
+const allResponses = [];
+
+const DIMENSIONS = {
+    distributive:  { label: '分配公平', css: 'dim-distributive', desc: '关注资源、报酬或结果分配是否公正合理' },
+    procedural:    { label: '程序公平', css: 'dim-procedural',   desc: '关注决策过程、规则与程序是否公正透明' },
+    interactional: { label: '互动公平', css: 'dim-interactional', desc: '关注人际对待方式是否尊重、诚恳与得体' }
+};
+
+const PERSPECTIVES = {
+    victim:      { label: '受害者视角', css: 'persp-victim' },
+    beneficiary: { label: '获利者视角', css: 'persp-beneficiary' },
+    bystander:   { label: '旁观者视角', css: 'persp-bystander' }
+};
+
+const SCENARIOS = {
+    participant: {
+        distributive: {
+            victim: {
+                title: '年终奖金分配',
+                text: `<p>你是某科技公司市场部的普通员工。年终考核结束后，你与同组的同事<strong>小李</strong>在过去一年中承担了几乎相同的工作量和项目难度，客户评价也处于同一水平。</p>
+                       <p>然而，在奖金发放时，你发现自己的年终奖金比小李<strong>少了约30%</strong>。你仔细核对了考核记录，并未发现自己有明显的工作失误或绩效差距。</p>
+                       <p>部门经理在全员邮件中仅公布了最终金额，没有解释具体的分配依据。</p>`
+            },
+            beneficiary: {
+                title: '项目奖励分配',
+                text: `<p>你是某制造企业研发部的工程师。今年你与同事<strong>小王</strong>共同完成了一个关键产品的技术攻关，两人在项目中的贡献度相当，加班时长和核心产出也基本一致。</p>
+                       <p>项目奖励分配结果公布后，你获得了比小王<strong>高出约35%</strong>的奖金。小王在茶水间向你提到，他觉得这个分配"有些说不通"。</p>
+                       <p>你注意到，部门并没有公开详细的评分标准或分配公式。</p>`
+            },
+            bystander: {
+                title: '团队绩效分配',
+                text: `<p>你是某金融机构运营部的员工。你所在的五人小组刚刚完成了季度业绩考核。</p>
+                       <p>你观察到，组内<strong>小张</strong>和<strong>小陈</strong>本季度的业绩数据几乎持平——客户满意度、业务完成量、协作评价都在同一档次。但小张获得的绩效奖金却比小陈<strong>多出近40%</strong>。</p>
+                       <p>小张在午餐时向其他同事抱怨"太不公平了"，小陈则沉默不语。部门主管没有就此做出任何说明。</p>`
+            }
+        },
+        procedural: {
+            victim: {
+                title: '晋升名额分配',
+                text: `<p>你是某咨询公司的高级顾问，已在公司工作四年，业绩排名长期位于部门前20%。本季度有一个高级经理的晋升名额。</p>
+                       <p>你提交了晋升申请，并认为自己具备充分的竞争力。然而，晋升结果公布时，名额给了另一位资历和业绩与你相当的同事。</p>
+                       <p>整个过程中，<strong>没有人征求你的意见</strong>，你没有机会陈述自己的工作成果，也<strong>不清楚评选的具体标准和流程</strong>。你只是在某天突然收到了晋升名单的邮件通知。</p>`
+            },
+            beneficiary: {
+                title: '评优结果公布',
+                text: `<p>你是某医院护理部的护士。年度"优秀员工"评选中，你获得了这一荣誉，将享有额外的培训机会和奖金。</p>
+                       <p>你事后得知，评选是由护理部主任<strong>单独决定的</strong>，没有经过科室讨论，也没有公布评选标准或候选人名单。几位与你资历相近的同事也参与了评选，但她们事先并不知情。</p>
+                       <p>有同事私下表示，评选过程"缺乏透明度"。</p>`
+            },
+            bystander: {
+                title: '裁员名单确定',
+                text: `<p>你是某零售连锁企业的区域督导。公司因业务调整需要裁减10%的员工。</p>
+                       <p>你目睹了以下过程：区域经理在<strong>没有与员工代表协商</strong>、<strong>没有公布裁减标准</strong>的情况下，直接拟定了一份裁员名单，并在会议上宣读后要求一周内执行。</p>
+                       <p>名单上的<strong>老刘</strong>是工龄最长的员工之一，他在会后情绪激动地质问："凭什么是我？"经理只是回答："这是公司决定。"</p>`
+            }
+        },
+        interactional: {
+            victim: {
+                title: '申诉遭到驳回',
+                text: `<p>你是某物流公司仓储部的班组长。上月你的班组因一笔货物差错被扣除了整组绩效分，你认为自己班组的责任被<strong>夸大</strong>了。</p>
+                       <p>你向仓库主管提出申诉，并准备了详细的证据材料。主管听完你的陈述后，不耐烦地挥了挥手说：</p>
+                       <p><em>"行了行了，结果已经定了，你就别纠结了。你要是觉得不公平，可以去找人事，但我告诉你——没什么用。"</em></p>
+                       <p>他没有查看你准备的任何材料，也没有解释扣分依据，随后便转身离开了办公室。</p>`
+            },
+            beneficiary: {
+                title: '会议上的区别对待',
+                text: `<p>你是某广告公司创意部的设计师。在本周的项目分配会议上，你获得了最核心、最受关注的客户项目。</p>
+                       <p>你的同事<strong>小赵</strong>对此提出异议，认为她之前负责过该客户的前期工作，理应继续跟进。创意总监当着所有人的面对小赵说：</p>
+                       <p><em>"你的能力大家都清楚，这个项目你把握不住。别老是斤斤计较，有意见也改变不了决定。"</em></p>
+                       <p>小赵的脸涨得通红，不再说话。你获得了项目，但整个会议室的气氛十分尴尬。</p>`
+            },
+            bystander: {
+                title: '当众羞辱式批评',
+                text: `<p>你是某教育机构教务部的行政人员。在周例会结束后，你和其他几位同事尚未离开会议室。</p>
+                       <p>教务主任叫住了<strong>小周</strong>，当着在场所有人的面，用严厉的语气批评她在排课工作中犯了错：</p>
+                       <p><em>"这么简单的活都干不好，你脑子在想什么？我告诉你，再犯一次你就自己走人！"</em></p>
+                       <p>小周低着头，眼眶泛红，没有辩解的机会。主任批评完毕后径直走出会议室，其他同事面面相觑，无人出声。</p>`
+            }
+        }
+    },
+    dominator: {
+        distributive: {
+            victim: {
+                title: '奖金分配引发不满',
+                text: `<p>你是某科技公司市场部的<strong>部门经理</strong>，负责年终奖金的最终分配。你刚刚完成了分配方案并公布了结果。</p>
+                       <p>员工<strong>小陈</strong>来到你的办公室，表示不满：他与同组的小李工作量相当、绩效相近，但奖金却比小李少了约30%。他认为这一分配<strong>有失公允</strong>。</p>
+                       <p>小陈提供了详细的业绩对比数据，情绪虽然有些激动，但态度总体克制，等待你的回应。</p>`
+            },
+            beneficiary: {
+                title: '资源分配引发关注',
+                text: `<p>你是某制造企业研发部的<strong>部门主管</strong>。你刚刚完成了项目奖励的分配，将大部分奖金给予了工程师<strong>小周</strong>。</p>
+                       <p>小周在项目中的贡献与另一位工程师小王大致相当，但小周获得的奖励高出约35%。这一差异引起了组内关注。</p>
+                       <p>小周私下找到你，表示他意识到分配比例"差距较大"，询问是否需要向团队做出说明。小王则尚未直接表态，但组内已有议论。</p>`
+            },
+            bystander: {
+                title: '绩效差距引发争议',
+                text: `<p>你是某金融机构运营部的<strong>部门主管</strong>。你刚刚公布了本季度绩效奖金分配结果。</p>
+                       <p>组内<strong>小张</strong>和<strong>小陈</strong>的业绩数据几乎持平，但小张获得的奖金比小陈多出近40%。这一差距在团队中引发了明显的不满情绪。</p>
+                       <p>小张在公开场合表达了不满，小陈保持沉默但神情沮丧。其他组员也在私下议论分配是否公正。作为分配决策者，你需要面对这一局面。</p>`
+            }
+        },
+        procedural: {
+            victim: {
+                title: '晋升决策遭到质疑',
+                text: `<p>你是某咨询公司的<strong>部门总监</strong>，刚刚做出了高级经理晋升人选的决定，将名额给予了员工A，而非员工B。</p>
+                       <p>员工B（业绩排名长期位于部门前20%）前来找你，表示自己完全<strong>不知情</strong>有这次晋升评选，也<strong>没有机会</strong>陈述自己的工作成果。他质疑评选过程缺乏透明度和参与性。</p>
+                       <p>事实上，这次晋升确实由你主要依据个人判断做出，未经过正式的评审流程或员工意见征询。</p>`
+            },
+            beneficiary: {
+                title: '评优结果引发议论',
+                text: `<p>你是某医院护理部的<strong>主任</strong>。你刚刚确定了年度"优秀员工"的人选——护士<strong>小孙</strong>。</p>
+                       <p>评选过程由你单独决定，未经过科室讨论，也未公布评选标准。几位资历与小孙相近的护士事先并不知晓此次评选。</p>
+                       <p>评选结果公布后，科室内出现了一些议论。小孙前来向你表示，她担心这一结果"可能引起同事的不满"，询问是否需要做些什么。</p>`
+            },
+            bystander: {
+                title: '裁员执行面临阻力',
+                text: `<p>你是某零售连锁企业的<strong>区域经理</strong>。公司要求你裁减区域内10%的员工，你拟定了一份裁员名单并准备执行。</p>
+                       <p>在宣布名单的会议上，被裁员工<strong>老刘</strong>（工龄最长的员工之一）当众质问："凭什么是我？标准是什么？"</p>
+                       <p>事实上，名单主要由你个人拟定，<strong>未与员工代表协商</strong>，也<strong>未公布裁减标准</strong>。在场的其他员工神情紧张，等待你的回应。</p>`
+            }
+        },
+        interactional: {
+            victim: {
+                title: '员工申诉待你回应',
+                text: `<p>你是某物流公司仓储部的<strong>仓库主管</strong>。班组长<strong>老吴</strong>前来就上月班组绩效被扣分一事提出正式申诉。</p>
+                       <p>老吴认为扣分责任被夸大，并准备了详细的证据材料。他态度恳切，希望你能认真审查。</p>
+                       <p>你此前已经确认了扣分决定，目前手头还有其他紧急事务。老吴正坐在你对面，等待你的回应。</p>`
+            },
+            beneficiary: {
+                title: '项目分配后的余波',
+                text: `<p>你是某广告公司创意部的<strong>创意总监</strong>。在刚才的项目分配会议上，你将最核心客户的项目分配给了设计师<strong>小孙</strong>，而非小赵。</p>
+                       <p>会议上，你当着所有人对提出异议的小赵说："你的能力大家都清楚，别老是斤斤计较。"小赵沉默不语，会议室气氛尴尬。</p>
+                       <p>会议结束后，小孙找到你，表示他获得了项目但感到"气氛不对"，询问是否应该和小赵沟通。小赵的直属同事也在私下议论你的处理方式。</p>`
+            },
+            bystander: {
+                title: '批评方式引发关注',
+                text: `<p>你是某教育机构教务部的<strong>教务主任</strong>。在刚才的周例会后，你当众严厉批评了<strong>小周</strong>在排课工作中的失误，措辞较为激烈。</p>
+                       <p>小周低着头，眼眶泛红，没有辩解。在场的其他行政人员目睹了全过程，会后气氛沉闷，无人主动说话。</p>
+                       <p>现在你需要继续处理日常教务工作，但你能感觉到同事们对你的态度似乎有所变化。有同事在走廊里窃窃私语。</p>`
+            }
+        }
+    }
+};
+
+const DIM_ORDER = ['distributive', 'procedural', 'interactional'];
+const PERSP_ORDER = ['victim', 'beneficiary', 'bystander'];
+
+function buildScenarioList(role) {
+    const list = [];
+    for (const dim of DIM_ORDER) {
+        for (const persp of PERSP_ORDER) {
+            const s = SCENARIOS[role][dim][persp];
+            list.push({ dim, persp, title: s.title, text: s.text });
+        }
+    }
+    return list;
+}
+
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+const jsPsych = initJsPsych({
+    on_finish: function() { displayResults(); }
+});
+
+let timeline = [];
+
+const welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">组织公平情境想象任务</div>
+        <div class="page-subtitle">Organizational Fairness Scenario Imagination Task</div>
+        <p>本任务将呈现一系列基于<strong>组织公平理论</strong>的经典工作情境。请仔细阅读每个场景，想象自己身处其中，然后描述<strong>您认为自己会采取的行为</strong>。</p>
+
+        <div class="dim-grid">
+            <div class="dim-card">
+                <h4 style="color:#1565c0;">分配公平</h4>
+                <p>资源、报酬或结果分配是否公正合理</p>
+            </div>
+            <div class="dim-card">
+                <h4 style="color:#2e7d32;">程序公平</h4>
+                <p>决策过程、规则与程序是否公正透明</p>
+            </div>
+            <div class="dim-card">
+                <h4 style="color:#c62828;">互动公平</h4>
+                <p>人际对待方式是否尊重、诚恳与得体</p>
+            </div>
+        </div>
+
+        <p>每个情境将从三种<strong>视角</strong>呈现：</p>
+        <p>
+            <span class="persp-badge persp-victim">受害者视角</span> 利益受损的一方 &nbsp;
+            <span class="persp-badge persp-beneficiary">获利者视角</span> 相对获益的一方 &nbsp;
+            <span class="persp-badge persp-bystander">旁观者视角</span> 在场但未直接受影响的一方
+        </p>
+
+        <p style="margin-top:20px;">实验编号：<strong>${subID}</strong></p>
+        <p style="text-align:center; margin-top:28px; color:#2d6a9f;"><strong>按任意键继续</strong></p>
+    </div>`
+};
+
+const instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">指导语</div>
+        <p><strong>1. 角色选择</strong><br>接下来，您将选择（或由系统分配）一种角色：</p>
+        <p>
+            <span class="role-badge role-participant">参与者</span> 组织中的普通成员（员工），体验公平或不公情境<br>
+            <span class="role-badge role-dominator">支配者</span> 拥有决策权和资源分配权的管理者
+        </p>
+        <p><strong>2. 情境阅读</strong><br>共 9 个情境，涵盖三种公平维度与三种视角。请尽量将自己<strong>代入场景</strong>，想象真实情况。</p>
+        <p><strong>3. 行为描述</strong><br>每个情境后，请用<strong>自己的语言</strong>详细描述：如果您身处该情境，<strong>您会怎么做？</strong>可以包括具体行动、沟通方式、情绪反应和后续计划。</p>
+        <p><strong>4. 注意事项</strong></p>
+        <ul>
+            <li>没有标准答案，请根据真实想法作答</li>
+            <li>每个情境至少写 2-3 句话</li>
+            <li>请独立完成，不要与他人讨论</li>
+        </ul>
+        <p style="text-align:center; margin-top:28px; color:#2d6a9f;"><strong>按任意键选择角色</strong></p>
+    </div>`
+};
+
+timeline.push(welcome, instructions);
+
+const roleSelection = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+    <div class="page-card">
+        <div class="page-title">请选择您的角色</div>
+        <p style="text-align:center; color:#5a6d82;">选择后，所有情境将以此角色视角呈现</p>
+    </div>`,
+    choices: ['__role_participant__', '__role_dominator__', '__role_random__'],
+    button_html: [
+        `<button class="role-select-btn">
+            <strong>👤 参与者</strong>
+            您是组织中的普通员工，体验作为团队成员遭遇或目睹各种公平情境
+        </button>`,
+        `<button class="role-select-btn">
+            <strong>👔 支配者</strong>
+            您是拥有决策权的管理者，面对下属的诉求、团队的不满或分配后的局面
+        </button>`,
+        `<button class="role-select-btn">
+            <strong>🎲 随机分配</strong>
+            由系统随机决定您的角色（参与者或支配者）
+        </button>`
+    ],
+    on_finish: function(data) {
+        const choice = data.response;
+        if (choice === 0) selectedRole = 'participant';
+        else if (choice === 1) selectedRole = 'dominator';
+        else selectedRole = Math.random() < 0.5 ? 'participant' : 'dominator';
+        data.assigned_role = selectedRole;
+    }
+};
+
+timeline.push(roleSelection);
+
+const roleConfirm = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+        const roleLabel = selectedRole === 'participant' ? '参与者' : '支配者';
+        const roleDesc = selectedRole === 'participant'
+            ? '您将以<strong>普通员工</strong>的身份，经历或目睹组织中的公平情境。'
+            : '您将以<strong>管理者</strong>的身份，面对分配决策后的各种局面和员工诉求。';
+        const roleCss = selectedRole === 'participant' ? 'role-participant' : 'role-dominator';
+        return `
+        <div class="page-card" style="text-align:center;">
+            <p>您的角色已确定：</p>
+            <span class="role-badge ${roleCss}" style="font-size:18pt; padding:10px 24px;">${roleLabel}</span>
+            <p style="margin-top:20px;">${roleDesc}</p>
+            <p>接下来将呈现 <strong>9 个情境</strong>，请逐一阅读并作答。</p>
+            <p style="margin-top:28px; color:#2d6a9f;"><strong>按任意键开始</strong></p>
+        </div>`;
+    }
+};
+
+timeline.push(roleConfirm);
+
+function buildScenarioTrials(role) {
+    const scenarios = shuffleArray(buildScenarioList(role));
+    const trials = [];
+
+    scenarios.forEach(function(sc, idx) {
+        const dimInfo = DIMENSIONS[sc.dim];
+        const perspInfo = PERSPECTIVES[sc.persp];
+        const total = scenarios.length;
+        const current = idx + 1;
+        const pct = Math.round((current / total) * 100);
+
+        trials.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+            <div class="page-card">
+                <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+                <div class="progress-label">情境 ${current} / ${total}</div>
+
+                <span class="dim-badge ${dimInfo.css}">${dimInfo.label}</span>
+                <span class="persp-badge ${perspInfo.css}">${perspInfo.label}</span>
+
+                <h3 style="margin:14px 0 6px; font-size:18pt; color:#1a3a5c;">${sc.title}</h3>
+
+                <div class="scenario-box">${sc.text}</div>
+
+                <div class="prompt-box">
+                    💭 请想象您正处于上述情境中。<strong>仔细阅读后，在下一页描述您认为自己会采取的行为。</strong>
+                </div>
+
+                <p style="text-align:center; margin-top:20px; color:#2d6a9f;"><strong>按任意键继续作答</strong></p>
+            </div>`,
+            data: {
+                phase: 'scenario_read',
+                dimension: sc.dim,
+                perspective: sc.persp,
+                scenario_title: sc.title,
+                trial_index: current
+            }
+        });
+
+        trials.push({
+            type: jsPsychSurveyText,
+            questions: [{
+                prompt: `<div style="margin-bottom:12px;">
+                    <span class="dim-badge ${dimInfo.css}">${dimInfo.label}</span>
+                    <span class="persp-badge ${perspInfo.css}">${perspInfo.label}</span>
+                    <strong style="margin-left:8px;">${sc.title}</strong>
+                </div>
+                <p>请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
+                <p style="font-size:13pt; color:#777;">（可包括具体行动、说什么话、情绪和后续打算，至少2-3句话）</p>`,
+                rows: 8,
+                columns: 70,
+                name: 'behavior_response',
+                required: true
+            }],
+            button_label: '提交并继续',
+            data: {
+                phase: 'behavior_response',
+                dimension: sc.dim,
+                perspective: sc.persp,
+                scenario_title: sc.title,
+                trial_index: current
+            },
+            on_finish: function(data) {
+                const resp = JSON.parse(data.responses);
+                allResponses.push({
+                    trial_index: current,
+                    dimension: sc.dim,
+                    dimension_label: dimInfo.label,
+                    perspective: sc.persp,
+                    perspective_label: perspInfo.label,
+                    scenario_title: sc.title,
+                    behavior: resp.behavior_response
+                });
+            }
+        });
+    });
+
+    return trials;
+}
+
+const scenarioBlock = {
+    timeline: function() {
+        jsPsych.data.addProperties({ subject_id: subID, role: selectedRole });
+        return buildScenarioTrials(selectedRole);
+    }
+};
+
+timeline.push(scenarioBlock);
+
+jsPsych.run(timeline);
+
+function displayResults() {
+    const roleLabel = selectedRole === 'participant' ? '参与者' : '支配者';
+    const timestamp = new Date().toLocaleString('zh-CN');
+
+    let tableRows = '';
+    allResponses.forEach(function(r) {
+        tableRows += `<tr>
+            <td>${r.trial_index}</td>
+            <td>${r.dimension_label}</td>
+            <td>${r.perspective_label}</td>
+            <td>${r.scenario_title}</td>
+            <td>${escapeHtml(r.behavior)}</td>
+        </tr>`;
+    });
+
+    const exportData = {
+        subject_id: subID,
+        role: selectedRole,
+        role_label: roleLabel,
+        timestamp: timestamp,
+        responses: allResponses
+    };
+
+    document.body.innerHTML = `
+    <div class="page-card" style="max-width:1000px; margin:30px auto;">
+        <div class="page-title">实验完成</div>
+        <p style="text-align:center;">感谢您的参与！</p>
+        <p>被试编号：<strong>${subID}</strong> &nbsp;|&nbsp; 角色：<strong>${roleLabel}</strong> &nbsp;|&nbsp; 完成时间：${timestamp}</p>
+
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>公平维度</th>
+                    <th>视角</th>
+                    <th>情境</th>
+                    <th>您的行为描述</th>
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+
+        <div style="text-align:center; margin-top:28px;">
+            <button class="jspsych-btn" onclick="downloadJSON()">下载 JSON 数据</button>
+            <button class="jspsych-btn" onclick="downloadCSV()">下载 CSV 数据</button>
+        </div>
+    </div>`;
+
+    window._exportData = exportData;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function downloadJSON() {
+    const blob = new Blob([JSON.stringify(window._exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fairness_${subID}_${selectedRole}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadCSV() {
+    const d = window._exportData;
+    const header = ['subject_id', 'role', 'trial_index', 'dimension', 'perspective', 'scenario_title', 'behavior'];
+    const rows = d.responses.map(function(r) {
+        return [d.subject_id, d.role, r.trial_index, r.dimension_label, r.perspective_label,
+                '"' + r.scenario_title.replace(/"/g, '""') + '"',
+                '"' + r.behavior.replace(/"/g, '""') + '"'].join(',');
+    });
+    const csv = '\uFEFF' + header.join(',') + '\n' + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fairness_${subID}_${selectedRole}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+</script>
+</html>
