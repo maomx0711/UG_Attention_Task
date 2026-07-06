@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公平认知地图 — 角色扮演任务</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #1a1a2e; color: #eee;
+    display: flex; justify-content: center; align-items: flex-start;
+    min-height: 100vh; padding: 12px;
+  }
+  #app {
+    width: 800px; max-width: 100%;
+    background: #16213e; border-radius: 18px; padding: 22px 26px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); margin: 10px 0;
+  }
+  h1 { font-size: 1.25rem; text-align: center; color: #7ec8e3; margin-bottom: 4px; }
+  .subtitle { text-align: center; font-size: 0.78rem; color: #8899aa; margin-bottom: 14px; }
+
+  .progress-bar { height: 6px; background: #2a2a4a; border-radius: 3px; margin-bottom: 14px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #5c9fd4, #7ec8e3); transition: width 0.4s; }
+
+  .dim-legend {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 14px; font-size: 0.72rem;
+  }
+  .dim-tag { padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .dim-distrib { background: #1a3a5c; color: #64b5f6; }
+  .dim-proced  { background: #1a3d2e; color: #81c784; }
+  .dim-interact{ background: #3d1a2a; color: #f48fb1; }
+
+  #scene {
+    background: #1e2d4a; border-radius: 14px; padding: 18px 20px;
+    margin-bottom: 14px; min-height: 180px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .char-row { display: flex; align-items: center; gap: 14px; width: 100%; }
+  .char-emoji { font-size: 2.8rem; flex-shrink: 0; }
+  .char-info .name { font-size: 1.05rem; font-weight: 700; color: #7ec8e3; }
+  .char-info .role { font-size: 0.78rem; color: #7799bb; }
+  .char-info .note { font-size: 0.7rem; color: #667788; margin-top: 2px; font-style: italic; }
+
+  .dialogue-bubble {
+    background: #f0f4f8; color: #2a2a3a; border-radius: 14px 14px 14px 2px;
+    padding: 12px 16px; max-width: 520px; line-height: 1.55; font-size: 0.9rem;
+    align-self: flex-start; width: 100%;
+  }
+  .dialogue-bubble.system {
+    background: #2a3550; color: #aabbcc; border-radius: 10px;
+    text-align: center; font-size: 0.85rem;
+  }
+  .dialogue-bubble.rest {
+    background: #2a3a40; color: #c8d8d0; border-radius: 10px;
+    text-align: center; font-size: 0.88rem;
+  }
+
+  #choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+  .choice-btn {
+    flex: 1; min-width: 200px; max-width: 360px;
+    padding: 13px 15px; border-radius: 12px; border: 2px solid #3a4a6a;
+    background: #1e3050; color: #ddd; font-size: 0.88rem; cursor: pointer;
+    transition: all 0.18s; text-align: left; line-height: 1.45;
+  }
+  .choice-btn:hover { border-color: #7ec8e3; background: #253a58; transform: translateY(-2px); }
+  .choice-btn .hint { display: block; font-size: 0.7rem; color: #8899aa; margin-top: 4px; }
+
+  #status {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    font-size: 0.78rem; color: #7799aa; margin-bottom: 12px;
+  }
+  #status span { background: #1a2840; padding: 4px 12px; border-radius: 20px; }
+
+  .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    padding: 10px 22px; border-radius: 24px; border: none; cursor: pointer;
+    font-size: 0.88rem; font-weight: 600; transition: all 0.18s;
+  }
+  .btn-primary { background: #5c9fd4; color: #0f1a2e; }
+  .btn-primary:hover { background: #7ec8e3; }
+  .btn-secondary { background: #2a3a5a; color: #aabbcc; }
+  .btn-secondary:hover { background: #354870; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* evaluation phase */
+  #eval-panel { display: none; }
+  #eval-panel h3 { text-align: center; color: #7ec8e3; margin-bottom: 10px; font-size: 1rem; }
+  .eval-char-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    padding: 10px 14px; background: #1e3050; border-radius: 10px;
+  }
+  .eval-char-header .emoji { font-size: 2rem; }
+  .eval-prompt { font-size: 0.82rem; color: #99aabb; margin-bottom: 8px; line-height: 1.5; }
+  .eval-textarea {
+    width: 100%; min-height: 100px; padding: 12px 14px; border-radius: 10px;
+    border: 2px solid #3a4a6a; background: #0f1a2e; color: #ddd;
+    font-family: inherit; font-size: 0.9rem; line-height: 1.6; resize: vertical;
+  }
+  .eval-textarea:focus { outline: none; border-color: #5c9fd4; }
+  .eval-nav { display: flex; justify-content: space-between; margin-top: 14px; }
+
+  /* 3D map projections */
+  #map-panel { display: none; margin-bottom: 14px; }
+  #map-panel h3 { font-size: 0.88rem; color: #8899bb; text-align: center; margin-bottom: 10px; }
+  .map-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .map-box { text-align: center; }
+  .map-box canvas { background: #0a1220; border-radius: 8px; border: 1px solid #3a4a6a; }
+  .map-box .map-label { font-size: 0.68rem; color: #667788; margin-top: 4px; }
+
+  #result { display: none; text-align: center; padding: 16px; }
+  #result h3 { color: #7ec8e3; margin-bottom: 10px; }
+  #result .detail { font-size: 0.82rem; color: #8899aa; line-height: 1.7; }
+
+  .player-card {
+    background: #253a58; border: 2px solid #5c9fd4; border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 14px; text-align: center;
+  }
+  .player-card .label { font-size: 0.72rem; color: #8899aa; }
+  .player-card .name { font-size: 1rem; color: #7ec8e3; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <h1>⚖️ 公平认知地图 — 角色扮演任务</h1>
+  <div class="subtitle">三维组织公平空间 · 分配 × 程序 × 互动 · 大学校园版</div>
+
+  <div class="dim-legend">
+    <span class="dim-tag dim-distrib">分配公平 — 资源/结果是否公正</span>
+    <span class="dim-tag dim-proced">程序公平 — 决策过程是否透明</span>
+    <span class="dim-tag dim-interact">互动公平 — 对待方式是否尊重</span>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="player-card" id="player-card" style="display:none;">
+    <div class="label">您的角色</div>
+    <div class="name" id="player-name">🎓 大一新生 · 小林</div>
+  </div>
+
+  <div id="scene"></div>
+  <div id="choices"></div>
+
+  <div id="status">
+    <span>阶段：<strong id="phase-label">序幕</strong></span>
+    <span>互动：<strong id="round-label">0</strong>/<span id="total-rounds">27</span></span>
+    <span>角色：<strong id="char-progress">0</strong>/9</span>
+  </div>
+  <div class="btn-row" id="btn-row"></div>
+
+  <div id="eval-panel">
+    <h3>📝 公平评价任务</h3>
+    <p style="text-align:center;font-size:0.78rem;color:#8899aa;margin-bottom:14px;">
+      请根据刚才的互动，用文字描述该角色在三个公平维度上的表现
+    </p>
+    <div id="eval-content"></div>
+    <div class="eval-nav">
+      <button class="btn btn-secondary" id="btn-eval-prev">← 上一位</button>
+      <button class="btn btn-primary" id="btn-eval-next">下一位 →</button>
+    </div>
+  </div>
+
+  <div id="map-panel">
+    <h3>🗺️ 公平认知空间（三维权衡坐标 · 仅供研究者参考）</h3>
+    <div class="map-row">
+      <div class="map-box"><canvas id="map-dp" width="220" height="220"></canvas><div class="map-label">分配 × 程序</div></div>
+      <div class="map-box"><canvas id="map-di" width="220" height="220"></canvas><div class="map-label">分配 × 互动</div></div>
+      <div class="map-box"><canvas id="map-pi" width="220" height="220"></canvas><div class="map-label">程序 × 互动</div></div>
+    </div>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<script>
+const PLAYER = { name: '🎓 大一新生 · 小林', role: '刚入学的普通大学生，正在适应校园生活' };
+
+// 9个NPC — 隐藏三维公平坐标 [-1, 1]
+const CHARACTERS = [
+  { id:'c0', name:'张辅导员', role:'学院辅导员', note:'处事公正，有口皆碑', emoji:'👩‍🏫',
+    distrib: 0.85, proced: 0.80, interact: 0.85 },
+  { id:'c1', name:'李主席', role:'学生会主席', note:'能争取资源，但作风强势', emoji:'👔',
+    distrib: 0.70, proced: -0.30, interact: -0.65 },
+  { id:'c2', name:'王教授', role:'专业课教授', note:'学术权威，要求严格', emoji:'🧑‍🔬',
+    distrib: 0.20, proced: -0.75, interact: -0.80 },
+  { id:'c3', name:'室友小陈', role:'同寝室室友', note:'朝夕相处，关系融洽', emoji:'🧑‍🎓',
+    distrib: 0.70, proced: 0.65, interact: 0.75 },
+  { id:'c4', name:'同学小周', role:'同班同学', note:'普通同学，交集不多', emoji:'👨‍🎓',
+    distrib: 0.00, proced: 0.00, interact: 0.00 },
+  { id:'c5', name:'班委小赵', role:'班长', note:'热心肠，但有时偏心', emoji:'📋',
+    distrib: -0.60, proced: -0.70, interact: 0.65 },
+  { id:'c6', name:'食堂阿姨', role:'食堂打饭阿姨', note:'对你特别照顾', emoji:'👩‍🍳',
+    distrib: 0.80, proced: -0.35, interact: 0.85 },
+  { id:'c7', name:'教务刘老师', role:'教务处干事', note:'按章办事，不好通融', emoji:'🏛️',
+    distrib: -0.40, proced: -0.85, interact: -0.55 },
+  { id:'c8', name:'小吴', role:'同年级同学', note:'家境优越，人脉广泛', emoji:'💎',
+    distrib: -0.80, proced: -0.55, interact: -0.70 },
+];
+
+// 每人3轮互动，共27轮
+const INTERACTIONS = [
+  // ---- 张辅导员 c0 高/高/高 ----
+  { charId:'c0', text:'「小林，助学金评定开始了。评选标准、流程和时间表都贴在公告栏和班级群了，你有疑问可以随时来找我。」',
+    options:[
+      { text:'谢谢张老师！我回去仔细看一下评选条件。', hint:'积极配合', dD:0.05, dP:0.10, dI:0.12 },
+      { text:'好的，不过评选条件会不会很苛刻啊……', hint:'担忧', dD:-0.03, dP:0.00, dI:0.05 },
+    ]},
+  { charId:'c0', text:'「你上次反映的宿舍热水问题，我跟后勤开了协调会。这是会议纪要，处理进度每周更新。」',
+    options:[
+      { text:'您真的太负责了！有您帮我们说话，感觉安心多了。', hint:'感恩', dD:0.05, dP:0.12, dI:0.15 },
+      { text:'希望这次能真正解决吧，上次也说过要处理……', hint:'疑虑', dD:-0.05, dP:-0.08, dI:-0.05 },
+    ]},
+  { charId:'c0', text:'「奖学金答辩名单出来了，你的材料准备得很充分。答辩当天我会坐在评委席，别有压力。」',
+    options:[
+      { text:'谢谢老师鼓励！我会认真准备答辩的。', hint:'积极', dD:0.08, dP:0.10, dI:0.12 },
+      { text:'答辩会不会有人情因素啊……', hint:'质疑', dD:-0.08, dP:-0.10, dI:-0.08 },
+    ]},
+
+  // ---- 李主席 c1 高分配/低程序/低互动 ----
+  { charId:'c1', text:'「社团活动经费我帮你批了，别问那么多流程，我跟财务打个招呼就行。」',
+    options:[
+      { text:'太感谢李主席了！您办事真利索。', hint:'感激', dD:0.12, dP:-0.05, dI:0.05 },
+      { text:'这样不走正规流程，会不会有问题？', hint:'顾虑', dD:0.00, dP:0.10, dI:0.08 },
+    ]},
+  { charId:'c1', text:'「十佳歌手名额我留了一个给你们学院，别外传。人选我基本定了，你配合就行。」',
+    options:[
+      { text:'好的，谢谢主席照顾！', hint:'顺从', dD:0.10, dP:-0.12, dI:-0.05 },
+      { text:'人选不应该公开评选吗？', hint:'质疑程序', dD:-0.05, dP:0.15, dI:0.10 },
+    ]},
+  { charId:'c1', text:'「你提的建议？嗯，我知道了。学生会的事我会处理，你别操心了。」（语气冷淡，未正视你）',
+    options:[
+      { text:'好吧……如果您需要帮忙随时叫我。', hint:'退缩', dD:0.00, dP:-0.05, dI:-0.10 },
+      { text:'主席，这个建议关系到所有同学，能否讨论一下？', hint:'坚持', dD:0.00, dP:0.08, dI:0.12 },
+    ]},
+
+  // ---- 王教授 c2 低程序/低互动 ----
+  { charId:'c2', text:'「期末成绩出来了。你的论文分数比预期低，不要来找我，评分标准不需要向学生解释。」',
+    options:[
+      { text:'教授，能否至少告诉我扣分在哪个部分？', hint:'克制申诉', dD:0.00, dP:0.10, dI:0.08 },
+      { text:'不解释评分标准，这合理吗？', hint:'对抗', dD:-0.05, dP:0.05, dI:-0.12 },
+    ]},
+  { charId:'c2', text:'「课堂提问你答不上来？大学不是高中，不会就回去好好看书，别指望我重复第二遍。」',
+    options:[
+      { text:'对不起教授，我课后补上，不懂的再来请教您。', hint:'谦虚', dD:0.00, dP:0.00, dI:0.05 },
+      { text:'您这样当众说，让我很难堪……', hint:'表达感受', dD:0.00, dP:0.05, dI:0.12 },
+    ]},
+  { charId:'c2', text:'「助教名额给了另一位同学。具体原因你不需要知道，好好反思自己的差距。」',
+    options:[
+      { text:'我明白了，我会继续努力提升自己。', hint:'接受', dD:-0.05, dP:-0.10, dI:-0.08 },
+      { text:'至少告诉我评选标准和流程吧？', hint:'要求透明', dD:0.00, dP:0.15, dI:0.10 },
+    ]},
+
+  // ---- 室友小陈 c3 高/高/高 ----
+  { charId:'c3', text:'「宿舍卫生轮值表我重新排了，每人打扫一天，周末一起大扫除。你看看有没有意见？」',
+    options:[
+      { text:'很合理！我没什么意见，就按这个来。', hint:'认可', dD:0.10, dP:0.12, dI:0.10 },
+      { text:'周末我有时要回家，能不能调一下？', hint:'协商', dD:0.05, dP:0.08, dI:0.08 },
+    ]},
+  { charId:'c3', text:'「小组作业的分工我写了个表，每人负责的部分工作量差不多。你先看看。」',
+    options:[
+      { text:'分得挺公平的，我没意见！', hint:'赞同', dD:0.12, dP:0.10, dI:0.12 },
+      { text:'我觉得文献综述那块太重了，能不能换一下？', hint:'商量', dD:0.05, dP:0.08, dI:0.10 },
+    ]},
+  { charId:'c3', text:'「你最近看着不太开心，怎么了？跟哥们说说，别一个人憋着。」',
+    options:[
+      { text:'谢谢你关心，最近课业压力有点大……', hint:'倾诉', dD:0.05, dP:0.05, dI:0.15 },
+      { text:'没事，就是有点累，不用担心。', hint:'封闭', dD:0.00, dP:0.00, dI:-0.05 },
+    ]},
+
+  // ---- 同学小周 c4 中性 ----
+  { charId:'c4', text:'「诶，你知道下节课在哪个教室吗？教务系统又打不开了。」',
+    options:[
+      { text:'在教三楼201，我发你定位。', hint:'热心', dD:0.05, dP:0.05, dI:0.10 },
+      { text:'我也不知道，你自己查吧。', hint:'冷淡', dD:0.00, dP:0.00, dI:-0.08 },
+    ]},
+  { charId:'c4', text:'「实验报告截止日期是周五，你写完了吗？我还没动呢。」',
+    options:[
+      { text:'我也还没写完，咱们可以互相讨论一下。', hint:'合作', dD:0.05, dP:0.05, dI:0.08 },
+      { text:'各写各的吧，别到时候扯不清。', hint:'疏离', dD:0.00, dP:0.00, dI:-0.05 },
+    ]},
+  { charId:'c4', text:'「食堂今天人好多，我排了二十分钟才打到饭。」',
+    options:[
+      { text:'是啊，下次可以错开高峰期。', hint:'闲聊', dD:0.00, dP:0.00, dI:0.05 },
+      { text:'嗯。', hint:'敷衍', dD:0.00, dP:0.00, dI:-0.05 },
+    ]},
+
+  // ---- 班委小赵 c5 低分配/低程序/高互动 ----
+  { charId:'c5', text:'「班级活动经费我帮你多报了一些，反正也没人细查。咱俩谁跟谁啊！」',
+    options:[
+      { text:'这不太好吧……还是按实际花费报比较稳妥。', hint:'正直', dD:0.10, dP:0.12, dI:0.05 },
+      { text:'哈哈谢谢班长！你真是好人。', hint:'接受', dD:-0.10, dP:-0.10, dI:0.08 },
+    ]},
+  { charId:'c5', text:'「评优名额我悄悄给你报上了，没走公示流程。你放心，我跟辅导员关系好。」',
+    options:[
+      { text:'班长，评优应该公开评选吧，这样对其他同学不公平。', hint:'坚持公正', dD:0.12, dP:0.15, dI:0.05 },
+      { text:'那……谢谢班长这么照顾我。', hint:'接受偏袒', dD:-0.12, dP:-0.12, dI:0.05 },
+    ]},
+  { charId:'c5', text:'「你最近是不是和小陈闹矛盾了？跟我说说，班长帮你调解。」（热情地拍你肩膀）',
+    options:[
+      { text:'谢谢班长关心，其实没什么大事。', hint:'感谢', dD:0.00, dP:0.00, dI:0.12 },
+      { text:'不用了，我们自己能处理。', hint:'拒绝', dD:0.00, dP:0.00, dI:-0.05 },
+    ]},
+
+  // ---- 食堂阿姨 c6 高分配/低程序/高互动 ----
+  { charId:'c6', text:'「孩子，今天红烧肉不错，阿姨给你多打了两块，盛满一点！」',
+    options:[
+      { text:'谢谢阿姨！您每次都对我特别好。', hint:'感恩', dD:0.10, dP:-0.05, dI:0.15 },
+      { text:'阿姨，还是按标准打吧，不然对别的同学不公平。', hint:'公正', dD:-0.05, dP:0.10, dI:0.05 },
+    ]},
+  { charId:'c6', text:'「看你瘦了不少，学习辛苦吧？阿姨每天给你留个鸡蛋，你来拿就行。」',
+    options:[
+      { text:'阿姨您太暖了，像家人一样！', hint:'感动', dD:0.08, dP:-0.03, dI:0.18 },
+      { text:'不用特意留，我自己会买早饭的。', hint:'客气', dD:0.00, dP:0.05, dI:0.05 },
+    ]},
+  { charId:'c6', text:'「那个新来的阿姨不知道你爱吃辣，下次打饭你直接来找阿姨，阿姨给你单做。」',
+    options:[
+      { text:'好呀，谢谢阿姨照顾！', hint:'接受', dD:0.08, dP:-0.08, dI:0.12 },
+      { text:'不用麻烦，我跟其他同学说一样的就行。', hint:'平等', dD:-0.05, dP:0.08, dI:0.05 },
+    ]},
+
+  // ---- 教务刘老师 c7 低程序/低互动 ----
+  { charId:'c7', text:'「转专业申请表？截止日期过了三天，规矩就是规矩，没法通融。」',
+    options:[
+      { text:'老师，能否了解一下迟交的具体处理依据？', hint:'理性询问', dD:0.00, dP:0.10, dI:0.08 },
+      { text:'就差三天，能不能帮帮忙？', hint:'求情', dD:-0.05, dP:-0.05, dI:0.05 },
+    ]},
+  { charId:'c7', text:'「成绩复议？把材料放这儿吧，什么时候有结果通知你，别催。」（头也没抬）',
+    options:[
+      { text:'好的老师，请问大概需要多长时间？', hint:'礼貌', dD:0.00, dP:0.05, dI:0.05 },
+      { text:'复议有没有明确的处理时限和流程？', hint:'追问程序', dD:0.00, dP:0.12, dI:0.08 },
+    ]},
+  { charId:'c7', text:'「学生证补办要本人来，带身份证、填表、交20块，三个工作日取。流程写墙上了，自己看。」',
+    options:[
+      { text:'好的，我按流程准备材料。', hint:'配合', dD:0.00, dP:0.05, dI:0.00 },
+      { text:'这流程也太繁琐了，能不能简化？', hint:'抱怨', dD:0.00, dP:-0.05, dI:-0.08 },
+    ]},
+
+  // ---- 小吴 c8 低/低/低 ----
+  { charId:'c8', text:'「实习名额？我爸跟那家公司的老总认识，打个招呼就行。你投简历估计也排不上。」',
+    options:[
+      { text:'……那祝你顺利。', hint:'沉默', dD:-0.05, dP:0.00, dI:-0.05 },
+      { text:'实习不是应该公开竞聘吗？', hint:'质疑', dD:0.08, dP:0.10, dI:0.05 },
+    ]},
+  { charId:'c8', text:'「奖学金？我年年都有啊，一些材料让秘书帮我弄的。你还自己写啊？太费劲了。」',
+    options:[
+      { text:'每个人情况不同吧。', hint:'平淡', dD:-0.03, dP:0.00, dI:0.00 },
+      { text:'这样对其他认真准备的同学不太公平吧。', hint:'直言', dD:0.10, dP:0.08, dI:0.05 },
+    ]},
+  { charId:'c8', text:'「社团部长？早内定好了，我哥们。你竞选也没戏，别浪费时间了。」（漫不经心）',
+    options:[
+      { text:'选举不是应该公开透明的吗？', hint:'质疑', dD:0.08, dP:0.12, dI:0.08 },
+      { text:'好吧，那我不报了。', hint:'放弃', dD:-0.05, dP:-0.05, dI:-0.08 },
+    ]},
+];
+
+const state = {
+  phase: 'intro',
+  round: 0,
+  totalRounds: INTERACTIONS.length,
+  interactionOrder: [],
+  introStep: 0,
+  restBreaks: [9, 18],
+  restTaken: {},
+  perceived: {},
+  choiceLog: [],
+  evalIndex: 0,
+  evaluations: {},
+  overallEval: '',
+};
+
+function initState() {
+  state.phase = 'intro';
+  state.round = 0;
+  state.interactionOrder = shuffle([...Array(INTERACTIONS.length).keys()]);
+  state.introStep = 0;
+  state.restTaken = {};
+  state.choiceLog = [];
+  state.evalIndex = 0;
+  state.evaluations = {};
+  state.overallEval = '';
+  state.perceived = {};
+  CHARACTERS.forEach(c => {
+    state.perceived[c.id] = { distrib: 0, proced: 0, interact: 0 };
+    state.evaluations[c.id] = '';
+  });
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function render() {
+  const pct = state.phase === 'playing' ? (state.round / state.totalRounds) * 100
+    : state.phase === 'eval' ? 90 + (state.evalIndex / (CHARACTERS.length + 1)) * 10
+    : state.phase === 'result' ? 100 : (state.introStep / 5) * 15;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('phase-label').textContent =
+    { intro:'序幕', playing:'角色互动', eval:'公平评价', result:'完成' }[state.phase] || state.phase;
+  document.getElementById('round-label').textContent = state.round;
+  document.getElementById('total-rounds').textContent = state.totalRounds;
+  const charsDone = new Set(INTERACTIONS.slice(0, state.round).map((_, i) =>
+    INTERACTIONS[state.interactionOrder[i]].charId)).size;
+  document.getElementById('char-progress').textContent =
+    state.phase === 'eval' ? state.evalIndex + '/' + CHARACTERS.length : charsDone + '/9';
+
+  document.getElementById('player-card').style.display =
+    state.phase === 'intro' && state.introStep < 2 ? 'none' : 'block';
+  document.getElementById('eval-panel').style.display = state.phase === 'eval' ? 'block' : 'none';
+  document.getElementById('map-panel').style.display = state.phase === 'result' ? 'block' : 'none';
+  document.getElementById('result').style.display = state.phase === 'result' ? 'block' : 'none';
+
+  if (state.phase === 'intro') renderIntro();
+  else if (state.phase === 'playing') renderPlaying();
+  else if (state.phase === 'eval') renderEval();
+  else if (state.phase === 'result') renderResult();
+}
+
+function renderIntro() {
+  const scene = document.getElementById('scene');
+  const choices = document.getElementById('choices');
+  const btnRow = document.getElementById('btn-row');
+  choices.innerHTML = '';
+
+  const steps = [
+    { text: '🎓 欢迎来到大学校园！你是<strong>大一新生小林</strong>，正在适应全新的学习生活。' },
+    { text: '在校园中，你将与<strong>9 位不同角色</strong>打交道——辅导员、教授、室友、班委、食堂阿姨……<br>每个人都有自己的处事方式。' },
+    { text: '你需要通过<strong>互动</strong>来感知每个人在三个公平维度上的位置：<br>'
+      + '<span style="color:#64b5f6">分配公平</span> · <span style="color:#81c784">程序公平</span> · <span style="color:#f48fb1">互动公平</span><br>'
+      + '你看不到他们的"公平坐标"，只能凭直觉感受。' },
+    { text: '你将进行 <strong>27 次互动</strong>（每位角色 3 次），每次选择你的回应方式。<br>互动结束后，请用文字<strong>评价每位角色</strong>在三个公平维度上的表现。' },
+    { text: '⚠️ 没有标准答案。请根据真实感受作答，就像你真的身处校园中一样。' },
+  ];
+
+  if (state.introStep >= steps.length) {
+    scene.innerHTML = '<div class="dialogue-bubble system">准备好了吗？点击下方按钮开始！</div>';
+    btnRow.innerHTML = '<button class="btn btn-primary" id="btn-start">🚀 开始互动</button>';
+    document.getElementById('btn-start').onclick = () => { state.phase = 'playing'; render(); };
+    return;
+  }
+  scene.innerHTML = `<div class="dialogue-bubble system">${steps[state.introStep].text}</div>`;
+  btnRow.innerHTML = `<button class="btn btn-primary" id="btn-next">▶ 继续</button>`;
+  document.getElementById('btn-next').onclick = () => { state.introStep++; render(); };
+}
+
+function renderPlaying() {
+  const scene = document.getElementById('scene');
+  const choices = document.getElementById('choices');
+  const btnRow = document.getElementById('btn-row');
+
+  if (state.round >= state.totalRounds) {
+    state.phase = 'eval';
+    state.evalIndex = 0;
+    render();
+    return;
+  }
+
+  if (state.restBreaks.includes(state.round) && !state.restTaken[state.round]) {
+    scene.innerHTML = `<div class="dialogue-bubble rest"><b>☕ 休息一下</b><br><br>已完成 <b>${state.round}</b> 次互动，起来走走吧。<br>准备好了再继续。</div>`;
+    choices.innerHTML = '';
+    btnRow.innerHTML = '<button class="btn btn-primary" id="btn-rest">▶ 继续</button>';
+    document.getElementById('btn-rest').onclick = () => { state.restTaken[state.round] = true; render(); };
+    return;
+  }
+
+  const idx = state.interactionOrder[state.round];
+  const inter = INTERACTIONS[idx];
+  const char = CHARACTERS.find(c => c.id === inter.charId);
+
+  scene.innerHTML = `
+    <div class="char-row">
+      <div class="char-emoji">${char.emoji}</div>
+      <div class="char-info">
+        <div class="name">${char.name}</div>
+        <div class="role">${char.role}</div>
+        <div class="note">${char.note}</div>
+      </div>
+    </div>
+    <div class="dialogue-bubble">${inter.text}</div>
+  `;
+
+  choices.innerHTML = inter.options.map((opt, i) => `
+    <button class="choice-btn" data-idx="${i}">
+      ${opt.text}
+      <span class="hint">— ${opt.hint}</span>
+    </button>
+  `).join('');
+
+  choices.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.onclick = function() {
+      const opt = inter.options[parseInt(this.dataset.idx)];
+      const pos = state.perceived[inter.charId];
+      pos.distrib  = clamp(pos.distrib  + opt.dD, -1, 1);
+      pos.proced   = clamp(pos.proced   + opt.dP, -1, 1);
+      pos.interact = clamp(pos.interact + opt.dI, -1, 1);
+      state.choiceLog.push({
+        round: state.round, charId: inter.charId, charName: char.name,
+        text: inter.text, choice: opt.text, hint: opt.hint
+      });
+      state.round++;
+      render();
+    };
+  });
+
+  btnRow.innerHTML = `<span style="font-size:0.78rem;color:#8899aa;">第 ${state.round + 1} / ${state.totalRounds} 次互动</span>`;
+}
+
+function renderEval() {
+  document.getElementById('scene').innerHTML = '';
+  document.getElementById('choices').innerHTML = '';
+  document.getElementById('btn-row').innerHTML = '';
+
+  const isOverall = state.evalIndex >= CHARACTERS.length;
+
+  if (isOverall) {
+    document.getElementById('eval-content').innerHTML = `
+      <div class="eval-char-header" style="justify-content:center;">
+        <div>
+          <div class="name" style="color:#7ec8e3;font-size:1.1rem;">🌐 总体评价</div>
+          <div class="role">综合本次所有互动经历</div>
+        </div>
+      </div>
+      <div class="eval-prompt">
+        请综合描述你对校园中<strong>公平氛围</strong>的整体感受：<br>
+        · 在<strong>分配公平</strong>（资源、机会分配）方面，你的观察是什么？<br>
+        · 在<strong>程序公平</strong>（决策流程与规则）方面，你的观察是什么？<br>
+        · 在<strong>互动公平</strong>（人际对待方式）方面，你的观察是什么？<br>
+        · 谁给你留下了最"公平"或最"不公平"的印象？为什么？
+      </div>
+      <textarea class="eval-textarea" id="eval-input" placeholder="请在此输入您的总体评价（至少3-5句话）…">${state.overallEval}</textarea>
+    `;
+    document.getElementById('btn-eval-prev').style.display = 'inline-block';
+    document.getElementById('btn-eval-next').textContent = '✅ 提交完成';
+  } else {
+    const char = CHARACTERS[state.evalIndex];
+    document.getElementById('eval-content').innerHTML = `
+      <div class="eval-char-header">
+        <div class="emoji">${char.emoji}</div>
+        <div class="char-info">
+          <div class="name">${char.name}</div>
+          <div class="role">${char.role} · ${char.note}</div>
+        </div>
+      </div>
+      <div class="eval-prompt">
+        请评价 <strong>${char.name}</strong> 在以下三个公平维度上的表现（至少2-3句话）：<br>
+        · <span style="color:#64b5f6">分配公平</span>：资源、机会、利益分配是否公正？<br>
+        · <span style="color:#81c784">程序公平</span>：决策过程是否透明、有规则？<br>
+        · <span style="color:#f48fb1">互动公平</span>：对待你的方式是否尊重、诚恳？
+      </div>
+      <textarea class="eval-textarea" id="eval-input" placeholder="请描述您对该角色的公平评价…">${state.evaluations[char.id] || ''}</textarea>
+    `;
+    document.getElementById('btn-eval-prev').style.display = state.evalIndex > 0 ? 'inline-block' : 'none';
+    document.getElementById('btn-eval-next').textContent =
+      state.evalIndex < CHARACTERS.length - 1 ? '下一位 →' : '总体评价 →';
+  }
+
+  const input = document.getElementById('eval-input');
+  document.getElementById('btn-eval-prev').onclick = () => {
+    saveCurrentEval(input.value);
+    if (state.evalIndex > 0) { state.evalIndex--; renderEval(); }
+  };
+  document.getElementById('btn-eval-next').onclick = () => {
+    if (!input.value.trim()) { alert('请填写评价内容后再继续。'); return; }
+    saveCurrentEval(input.value);
+    if (isOverall) {
+      state.phase = 'result';
+      render();
+    } else {
+      state.evalIndex++;
+      renderEval();
+    }
+  };
+}
+
+function saveCurrentEval(text) {
+  if (state.evalIndex >= CHARACTERS.length) {
+    state.overallEval = text;
+  } else {
+    state.evaluations[CHARACTERS[state.evalIndex].id] = text;
+  }
+}
+
+function renderResult() {
+  document.getElementById('scene').innerHTML = '';
+  document.getElementById('choices').innerHTML = '';
+  document.getElementById('btn-row').innerHTML = '';
+  drawMaps();
+
+  let evalRows = '';
+  CHARACTERS.forEach(c => {
+    evalRows += `<tr><td style="padding:6px 12px;border-bottom:1px solid #2a3a5a;">${c.emoji} ${c.name}</td>`
+      + `<td style="padding:6px 12px;border-bottom:1px solid #2a3a5a;text-align:left;font-size:0.8rem;color:#aabbcc;">${escHtml(state.evaluations[c.id] || '')}</td></tr>`;
+  });
+
+  document.getElementById('result').innerHTML = `
+    <h3>✅ 任务完成</h3>
+    <p class="detail">你完成了 27 次校园互动，并对 9 位角色及整体公平氛围进行了评价。</p>
+    <table style="width:100%;margin:14px 0;border-collapse:collapse;">
+      <tr><th style="padding:6px 12px;border-bottom:1px solid #3a4a6a;color:#7ec8e3;">角色</th>
+          <th style="padding:6px 12px;border-bottom:1px solid #3a4a6a;color:#7ec8e3;">您的公平评价</th></tr>
+      ${evalRows}
+    </table>
+    <div style="text-align:left;background:#1e3050;border-radius:10px;padding:14px;margin:12px 0;">
+      <div style="color:#7ec8e3;font-weight:700;margin-bottom:6px;">🌐 总体评价</div>
+      <div style="font-size:0.85rem;color:#aabbcc;line-height:1.6;">${escHtml(state.overallEval)}</div>
+    </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-primary" id="btn-export">📥 下载数据 (JSON)</button>
+      <button class="btn btn-secondary" id="btn-restart">🔄 重新开始</button>
+    </div>
+  `;
+  document.getElementById('btn-export').onclick = exportData;
+  document.getElementById('btn-restart').onclick = () => { initState(); render(); };
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function drawMaps() {
+  drawProjection('map-dp', 'distrib', 'proced', '分配', '程序');
+  drawProjection('map-di', 'distrib', 'interact', '分配', '互动');
+  drawProjection('map-pi', 'proced', 'interact', '程序', '互动');
+}
+
+function drawProjection(canvasId, axisX, axisY, labelX, labelY) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, m = 30;
+  const pw = W - m * 2, ph = H - m * 2;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#1e3040'; ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(m + pw * i / 4, m); ctx.lineTo(m + pw * i / 4, H - m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m, m + ph * i / 4); ctx.lineTo(W - m, m + ph * i / 4); ctx.stroke();
+  }
+  const cx = m + pw / 2, cy = m + ph / 2;
+  ctx.strokeStyle = '#445566'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, m); ctx.lineTo(cx, H - m); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(m, cy); ctx.lineTo(W - m, cy); ctx.stroke();
+
+  ctx.fillStyle = '#667788'; ctx.font = '10px Microsoft YaHei'; ctx.textAlign = 'center';
+  ctx.fillText(labelX + ' →', W / 2, H - 4);
+  ctx.save(); ctx.translate(10, H / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText(labelY + ' →', 0, 0); ctx.restore();
+
+  CHARACTERS.forEach(c => {
+    const rx = m + pw * (c[axisX] + 1) / 2;
+    const ry = m + ph * (1 - (c[axisY] + 1) / 2);
+    const px = m + pw * (state.perceived[c.id][axisX] + 1) / 2;
+    const py = m + ph * (1 - (state.perceived[c.id][axisY] + 1) / 2);
+
+    ctx.beginPath(); ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(120,140,170,0.5)'; ctx.fill();
+
+    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(px, py);
+    ctx.strokeStyle = 'rgba(126,200,227,0.3)'; ctx.setLineDash([3, 3]); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#5c9fd4'; ctx.fill();
+    ctx.fillStyle = '#ccc'; ctx.font = '9px Microsoft YaHei';
+    ctx.fillText(c.name.slice(0, 3), px, py - 9);
+  });
+}
+
+function exportData() {
+  const data = {
+    player: PLAYER,
+    timestamp: new Date().toISOString(),
+    choiceLog: state.choiceLog,
+    perceivedPositions: state.perceived,
+    characterTruth: CHARACTERS.map(c => ({
+      id: c.id, name: c.name,
+      distrib: c.distrib, proced: c.proced, interact: c.interact
+    })),
+    evaluations: CHARACTERS.map(c => ({
+      id: c.id, name: c.name, text: state.evaluations[c.id]
+    })),
+    overallEvaluation: state.overallEval
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fairness_roleplay_' + Date.now() + '.json';
+  a.click();
+}
+
+initState();
+render();
+</script>
+</body>
+</html>
