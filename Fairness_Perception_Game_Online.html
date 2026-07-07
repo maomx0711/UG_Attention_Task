@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公平观念互动测试（通用生活版 · 在线）</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+    <style>
+body {
+    user-select: none;
+    background-color: #f0f4f8;
+    color: #2d3748;
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    font-size: 16pt;
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+}
+
+.jspsych-content { max-width: 920px; margin: auto; }
+
+.jspsych-btn {
+    font-size: 14pt;
+    font-family: inherit;
+    margin: 0.4em;
+    padding: 12px 28px;
+    border-radius: 8px;
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 120px;
+}
+
+.jspsych-btn:hover {
+    background-color: #3d5d8a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
+}
+
+.game-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 40px;
+    margin: 20px auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.game-title {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #2c5282;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.game-subtitle {
+    font-size: 13pt;
+    color: #718096;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.meta-tag {
+    font-size: 11pt;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.tag-distributive { background: #ebf8ff; color: #2b6cb0; }
+.tag-procedural { background: #faf5ff; color: #6b46c1; }
+.tag-interactional { background: #f0fff4; color: #276749; }
+.tag-victim { background: #fff5f5; color: #c53030; }
+.tag-beneficiary { background: #fffff0; color: #b7791f; }
+.tag-bystander { background: #f7fafc; color: #4a5568; }
+.tag-participant { background: #e6fffa; color: #285e61; }
+.tag-dominator { background: #fffaf0; color: #c05621; }
+
+.scenario-narrative {
+    background: #f7fafc;
+    border-left: 4px solid #4a6fa5;
+    padding: 20px 24px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 15pt;
+    line-height: 1.8;
+}
+
+.scenario-question {
+    font-size: 16pt;
+    font-weight: 600;
+    text-align: center;
+    margin: 24px 0 16px;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a6fa5, #63b3ed);
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+    margin-bottom: 8px;
+}
+
+.choice-btn {
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    margin: 10px auto;
+    text-align: left;
+    padding: 16px 24px !important;
+    font-size: 14pt !important;
+    line-height: 1.5;
+    white-space: normal;
+}
+
+.rating-prompt {
+    text-align: center;
+    font-size: 14pt;
+    color: #4a5568;
+    margin: 16px 0;
+}
+
+.instruction-list { text-align: left; max-width: 720px; margin: 0 auto; }
+.instruction-list li { margin: 10px 0; }
+
+.summary-card {
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+}
+
+.summary-card h4 { margin: 0 0 8px; color: #2c5282; }
+
+/* 三维公平地图 */
+.fairness-map-container { max-width: 960px; }
+
+.map-instruction {
+    font-size: 14pt;
+    color: #4a5568;
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.map-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.map-canvas-wrap {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    cursor: crosshair;
+}
+
+#fairness-map-canvas { display: block; }
+
+.map-sliders {
+    flex: 1;
+    min-width: 220px;
+    max-width: 280px;
+}
+
+.map-slider-row {
+    margin: 16px 0;
+}
+
+.map-slider-row label {
+    display: block;
+    font-size: 13pt;
+    margin-bottom: 6px;
+    color: #4a5568;
+}
+
+.map-slider-row input[type="range"] {
+    width: 100%;
+    accent-color: #4a6fa5;
+}
+
+.map-coords {
+    text-align: center;
+    font-size: 13pt;
+    color: #2c5282;
+    font-weight: 600;
+    margin: 16px 0;
+}
+
+.map-hint {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+}
+
+#fairness-map-confirm {
+    display: block;
+    margin: 20px auto 0;
+    font-size: 15pt;
+    padding: 14px 36px;
+}
+
+#jspsych-survey-likert-form p { font-size: 14pt; }
+
+@media (max-width: 640px) {
+    .game-container { padding: 20px 16px; }
+    #fairness-map-canvas { width: 100%; height: auto; }
+}
+
+    </style>
+</head>
+<body></body>
+<script>
+/**
+ * 通用生活版 — 公平测试场景库（18组合 × 4变体 = 72轮）
+ */
+(function (global) {
+    'use strict';
+
+    const RATINGS = ['分配公平程度', '程序公平程度', '互动公平程度'];
+
+    const C = {
+        victimReject: [
+            { key: 'reject', text: '明确反对，要求重新处理', tags: { rejectUnfair: 2, distributive: 2, voiceConcern: 2 } },
+            { key: 'negotiate', text: '提出协商，争取更公正的结果', tags: { voiceConcern: 2, distributive: 1 } },
+            { key: 'reluctant', text: '不满但暂时接受', tags: { acceptUnfair: 1, distributive: 1 } },
+            { key: 'accept', text: '接受现状，避免冲突', tags: { acceptUnfair: 2 } }
+        ],
+        dominatorFair: [
+            { key: 'fair', text: '采取透明、公正的处理方式', tags: { distributive: 2, procedural: 2, interactional: 1 } },
+            { key: 'balanced', text: '在规则允许下尽量平衡各方利益', tags: { distributive: 1, procedural: 1 } },
+            { key: 'favor', text: '优先考虑与自己关系更近的一方', tags: { acceptUnfair: -2, distributive: -2 } },
+            { key: 'self', text: '优先考虑自身利益', tags: { acceptUnfair: -3, distributive: -3 } }
+        ],
+        bystanderAct: [
+            { key: 'intervene', text: '主动介入，为受影响者发声', tags: { intervene: 2, voiceConcern: 2 } },
+            { key: 'private', text: '私下支持受影响者，但不公开对抗', tags: { voiceConcern: 1 } },
+            { key: 'silent', text: '保持沉默，不介入', tags: { acceptUnfair: 1 } },
+            { key: 'support_auth', text: '支持权威方的决定', tags: { acceptUnfair: 2 } }
+        ],
+        procVictim: [
+            { key: 'appeal', text: '申诉并要求公开公正的程序', tags: { rejectUnfair: 2, procedural: 2, voiceConcern: 2 } },
+            { key: 'feedback', text: '接受结果但反映程序问题', tags: { procedural: 1, voiceConcern: 1 } },
+            { key: 'withdraw', text: '对程序失望，考虑退出', tags: { rejectUnfair: 1, procedural: 1 } },
+            { key: 'accept', text: '认为结果比程序更重要', tags: { acceptUnfair: 1, prioritizeOutcome: 2 } }
+        ],
+        interVictim: [
+            { key: 'confront', text: '指出受到的不尊重对待', tags: { voiceConcern: 2, interactional: 2 } },
+            { key: 'document', text: '记录经过并向相关部门反映', tags: { voiceConcern: 2, procedural: 1 } },
+            { key: 'withdraw', text: '感到受伤但选择回避', tags: { acceptUnfair: 1, interactional: 1 } },
+            { key: 'reflect', text: '反思是否自己也有不当之处', tags: { acceptUnfair: 1 } }
+        ]
+    };
+
+    function tpl(narratives, question, choices) {
+        return narratives.map(function (n) {
+            return { narrative: n, question: question, choices: choices, ratings: RATINGS };
+        });
+    }
+
+    const templates = {
+        distributive_victim_participant: tpl([
+            '你和同伴共同完成社区志愿项目，负责人宣布：同伴获 800 元补贴，你获 200 元，理由是其"贡献更大"，但你认为付出相当。',
+            '家庭聚会后，长辈分给表哥一块玉佩，给你一包零食，称"他更懂事"。你全程参与准备。',
+            '球队赢得比赛，教练把大部分奖金给了首发，替补球员（包括你）只拿到象征性金额。',
+            '合租室友提议按房间大小分摊房租，但公共区域的清洁全由你负责，费用却均摊。'
+        ], '面对这种分配，你会怎么做？', C.victimReject),
+
+        distributive_beneficiary_dominator: tpl([
+            '你是小区活动组织者，需在两位志愿者间分配 10000 元感谢金，工作量相当，其中一位与你更熟。',
+            '家庭财产分配中，你有决定权，需在两位子女间分配遗产，一人照顾父母更多，另一人经济更困难。',
+            '你是社团社长，一笔赞助款需分配给两个部门，成员贡献相近，但一个部门与你私交更好。',
+            '班级聚餐后剩余 600 元，作为班长你决定如何退还给各组，各组实际垫付金额不完全相同。'
+        ], '你会如何分配？', C.dominatorFair),
+
+        distributive_bystander_participant: tpl([
+            '你目睹邻居家的孩子因考试成绩获奖励，而另一位同样努力的孩子被忽视，家长当面未表态。',
+            '商场促销抽奖，工作人员将大奖给了熟客，你和其他顾客在场目睹全过程。',
+            '社区停车位分配中，物业将优质车位给了关系户，排队多年的老人未获分配。',
+            '朋友聚会买单时，有人提议按收入分摊，但收入最高者却坚持均摊。'
+        ], '作为旁观者，你会如何反应？', C.bystanderAct),
+
+        procedural_victim_participant: tpl([
+            '奖学金评选未公开标准，委员会直接公布结果，你未入选，后发现评委与获奖者有关联。',
+            '小区业委会改选取消匿名投票，改为举手表决，你感到压力而未投反对票。',
+            '比赛裁判临时更改评分规则，你在新规则下得分下降，无缘决赛。',
+            '社团换届选举缩短候选人演讲时间，你与另一位候选人被安排在最后且时间被压缩。'
+        ], '你认为程序公平吗？你会怎么做？', C.procVictim),
+
+        procedural_beneficiary_dominator: tpl([
+            '你是评审组长，时间紧迫：关系好的候选人成绩中等，另一人更优秀但内向，你可简化或完整走流程。',
+            '家庭会议决定大额支出，你掌握议程，可选择充分讨论或快速表决。',
+            '球队选拔你有最终决定权，可安排公开试训，也可根据印象直接确定名单。',
+            '社区公益岗位招聘，你可按规章公开选拔，也可内部推荐熟人。'
+        ], '你会如何处理决策程序？', [
+            { key: 'full', text: '坚持完整公开流程', tags: { procedural: 2, distributive: 1 } },
+            { key: 'simplified', text: '简化流程但公开标准', tags: { procedural: 1 } },
+            { key: 'favor', text: '偏向熟人，省略关键环节', tags: { procedural: -2, acceptUnfair: -2 } },
+            { key: 'outcome', text: '只看结果，程序从简', tags: { procedural: -1, prioritizeOutcome: 1 } }
+        ]),
+
+        procedural_bystander_participant: tpl([
+            '课堂上老师随机点名回答，你注意到总是点到同一批学生，其他人很少被提问。',
+            '选举中监票员未核对选票就直接唱票，你在场目睹。',
+            '比赛抽签环节，组织者当着你的面更换了抽签顺序。',
+            '社区投票截止后，有人补交选票并被计入，你参与了全程。'
+        ], '你如何看待这个程序？', C.bystanderAct),
+
+        interactional_victim_participant: tpl([
+            '会议上你提建议被经理当众打断，随后同事提类似建议却获赞赏。',
+            '排队时你被插队，对方对你态度轻蔑，工作人员未制止。',
+            '课堂上你回答问题出错被严厉批评，另一位同学犯同样错误只被温和提醒。',
+            '亲戚聚会上你的成就被忽视，表兄的类似成就却被大肆表扬。'
+        ], '面对这种互动，你会如何反应？', C.interVictim),
+
+        interactional_beneficiary_dominator: tpl([
+            '你是餐厅主管，好友小张忘上菜，小李迟到 10 分钟，错误性质类似，你决定如何沟通。',
+            '你是班主任，两名学生上课讲话，一人是班干部，你决定如何批评。',
+            '你是队长，两名队员训练迟到，一人是主力，你决定如何处罚。',
+            '你是房东，两位租客都迟交房租，一位常送礼，你决定如何催缴。'
+        ], '你会如何处理？', [
+            { key: 'equal', text: '同等态度私下沟通', tags: { interactional: 2, procedural: 1 } },
+            { key: 'context', text: '考虑情境但态度一致', tags: { interactional: 1 } },
+            { key: 'favor', text: '对关系好者从轻处理', tags: { interactional: -2, acceptUnfair: -2 } },
+            { key: 'public', text: '当众区别对待', tags: { interactional: -3, acceptUnfair: -2 } }
+        ]),
+
+        interactional_bystander_participant: tpl([
+            '课间老师因 A 讲话严厉罚站，五分钟前 B 讲话却只被提醒，你在场。',
+            '公交车上售票员对老人态度恶劣，年轻人插话也未被制止，你目睹全程。',
+            '邻居因琐事被物业辱骂，另一位邻居犯同样错误却未被追究，你在场。',
+            '朋友聚会中有人被当众取笑，另一位说类似话却被当作玩笑，你在场。'
+        ], '作为旁观者，你会怎么做？', C.bystanderAct)
+    };
+
+    // 补全缺失的 9 个组合（对称扩展）
+    templates.distributive_victim_dominator = templates.distributive_beneficiary_dominator;
+    templates.distributive_beneficiary_participant = templates.distributive_victim_participant;
+    templates.distributive_bystander_dominator = templates.distributive_beneficiary_dominator;
+    templates.procedural_victim_dominator = templates.procedural_beneficiary_dominator;
+    templates.procedural_beneficiary_participant = templates.procedural_victim_participant;
+    templates.procedural_bystander_dominator = templates.procedural_beneficiary_dominator;
+    templates.interactional_victim_dominator = templates.interactional_beneficiary_dominator;
+    templates.interactional_beneficiary_participant = templates.interactional_victim_participant;
+    templates.interactional_bystander_dominator = templates.interactional_beneficiary_dominator;
+
+    const adaptive = {
+        followup_reject: {
+            id: 'followup_reject',
+            dimension: 'distributive', perspective: 'victim', role: 'participant',
+            trigger: function (p) { return p.rejectUnfair >= 4; },
+            narrative: '【后续】你曾多次维护公平。上司私下表示可帮你争取利益，条件是你不再公开反对。',
+            question: '你会如何回应？',
+            choices: [
+                { key: 'refuse', text: '拒绝交易，坚持正当渠道', tags: { rejectUnfair: 2, procedural: 2 } },
+                { key: 'partial', text: '不再公开反对，但要求改善', tags: { voiceConcern: 1 } },
+                { key: 'accept', text: '接受交易', tags: { acceptUnfair: 2 } },
+                { key: 'report', text: '举报这种交易', tags: { rejectUnfair: 2, intervene: 1 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_intervene: {
+            id: 'followup_intervene',
+            dimension: 'interactional', perspective: 'bystander', role: 'participant',
+            trigger: function (p) { return p.intervene >= 4; },
+            narrative: '【后续】你曾多次介入不公事件。这次目睹外卖员被顾客辱骂，路人只围观不制止。',
+            question: '你会怎么做？',
+            choices: [
+                { key: 'intervene', text: '上前制止并为外卖员说话', tags: { intervene: 2, interactional: 2 } },
+                { key: 'help', text: '报警或联系平台，不直接对峙', tags: { intervene: 1 } },
+                { key: 'record', text: '拍摄取证事后维权', tags: { voiceConcern: 1 } },
+                { key: 'leave', text: '走开不卷入', tags: { acceptUnfair: 1 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_procedure: {
+            id: 'followup_procedure',
+            dimension: 'procedural', perspective: 'victim', role: 'participant',
+            trigger: function (p) { return p.procedural >= 4; },
+            narrative: '【后续】你重视程序公正。新政策流程完全合规，但结果对你不利，而关系户受益。',
+            question: '你的态度是？',
+            choices: [
+                { key: 'accept_proc', text: '接受，程序公正即可', tags: { procedural: 2 } },
+                { key: 'question', text: '认可程序但质疑标准', tags: { procedural: 1, distributive: 1 } },
+                { key: 'reject', text: '要求复核结果', tags: { distributive: 2, rejectUnfair: 1 } },
+                { key: 'appeal', text: '申诉并建议改进标准', tags: { voiceConcern: 2 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_mixed: {
+            id: 'followup_mixed',
+            dimension: 'procedural', perspective: 'bystander', role: 'participant',
+            trigger: function () { return true; },
+            narrative: '【综合】公交车上老人因刷卡机故障被要求下车，售票员不听解释，乘客反应不一。',
+            question: '你会怎么做？',
+            choices: [
+                { key: 'speak', text: '为老人说话要求核实', tags: { intervene: 2, interactional: 1 } },
+                { key: 'pay', text: '替老人付车费化解', tags: { voiceConcern: 1, distributive: 1 } },
+                { key: 'complain', text: '事后投诉', tags: { voiceConcern: 1, procedural: 1 } },
+                { key: 'silent', text: '保持沉默', tags: { acceptUnfair: 1 } }
+            ],
+            ratings: RATINGS
+        }
+    };
+
+    global.FAIRNESS_SCENARIO_PACK = {
+        id: 'general',
+        exportPrefix: 'FairnessGame_General',
+        adaptiveInterval: 9,
+        templates: templates,
+        adaptive: adaptive,
+        fallback: {
+            id: 'fallback',
+            dimension: 'procedural', perspective: 'bystander', role: 'participant',
+            narrative: '日常生活中，你遇到一起涉及公平争议的事件，需要做出反应。',
+            question: '你通常会怎么做？',
+            choices: C.bystanderAct,
+            ratings: RATINGS
+        }
+    };
+})(window);
+
+</script>
+<script>
+/**
+ * 公平观念互动测试 — 共享引擎
+ * 支持 72 轮对话、自适应分支、三维公平地图确认
+ */
+(function (global) {
+    'use strict';
+
+    const DIMENSION_LABELS = {
+        distributive: '分配公平',
+        procedural: '程序公平',
+        interactional: '互动公平'
+    };
+
+    const PERSPECTIVE_LABELS = {
+        victim: '受害者视角',
+        beneficiary: '获利者视角',
+        bystander: '旁观者视角'
+    };
+
+    const ROLE_LABELS = {
+        participant: '参与者',
+        dominator: '支配者'
+    };
+
+    const DIMENSIONS = ['distributive', 'procedural', 'interactional'];
+    const PERSPECTIVES = ['victim', 'beneficiary', 'bystander'];
+    const ROLES = ['participant', 'dominator'];
+
+    function shuffleArray(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function templateKey(dimension, perspective, role) {
+        return dimension + '_' + perspective + '_' + role;
+    }
+
+    function allComboKeys() {
+        const keys = [];
+        for (const d of DIMENSIONS) {
+            for (const p of PERSPECTIVES) {
+                for (const r of ROLES) {
+                    keys.push(templateKey(d, p, r));
+                }
+            }
+        }
+        return keys;
+    }
+
+    function createGameState(config) {
+        return {
+            subjectID: '',
+            scenarioPtr: 0,
+            scenarioCache: {},
+            responses: [],
+            mapPosition: null,
+            mapConfirmed: false,
+            profile: {
+                distributive: 0,
+                procedural: 0,
+                interactional: 0,
+                acceptUnfair: 0,
+                rejectUnfair: 0,
+                intervene: 0,
+                voiceConcern: 0,
+                prioritizeProcedure: 0,
+                prioritizeOutcome: 0,
+                prioritizeInteraction: 0
+            },
+            config: config
+        };
+    }
+
+    function updateProfile(gameState, tags) {
+        if (!tags) return;
+        for (const [key, value] of Object.entries(tags)) {
+            if (gameState.profile[key] !== undefined) {
+                gameState.profile[key] += value;
+            }
+        }
+    }
+
+    function instantiateScenario(raw, index, pack) {
+        const id = raw.id || ('round_' + (index + 1));
+        return {
+            id: id,
+            dimension: raw.dimension,
+            perspective: raw.perspective,
+            role: raw.role,
+            narrative: raw.narrative,
+            question: raw.question,
+            choices: raw.choices,
+            ratings: raw.ratings || ['分配公平程度', '程序公平程度', '互动公平程度'],
+            isAdaptive: !!raw.isAdaptive
+        };
+    }
+
+    function generateTemplateScenario(gameState, index, pack) {
+        const combos = allComboKeys();
+        const combo = combos[index % combos.length];
+        const variantIdx = Math.floor(index / combos.length);
+        const parts = combo.split('_');
+        const role = parts.pop();
+        const perspective = parts.pop();
+        const dimension = parts.join('_');
+
+        const templates = pack.templates[combo] || pack.templates[templateKey(dimension, perspective, role)];
+        if (!templates || !templates.length) {
+            return instantiateScenario(pack.fallback, index, pack);
+        }
+        const raw = templates[variantIdx % templates.length];
+        return instantiateScenario({
+            ...raw,
+            id: combo + '_v' + (variantIdx % templates.length) + '_r' + (index + 1),
+            dimension: dimension,
+            perspective: perspective,
+            role: role
+        }, index, pack);
+    }
+
+    function selectAdaptiveScenario(gameState, pack) {
+        const used = new Set(gameState.responses.map(function (r) { return r.scenarioId; }));
+        const candidates = shuffleArray(
+            Object.values(pack.adaptive || {})
+                .filter(function (s) { return !used.has(s.id); })
+                .filter(function (s) { return (s.trigger || function () { return true; })(gameState.profile); })
+        );
+        if (candidates.length) {
+            return instantiateScenario(Object.assign({}, candidates[0], { isAdaptive: true }), gameState.scenarioPtr, pack);
+        }
+        const fallback = pack.adaptive && pack.adaptive.followup_mixed;
+        if (fallback && !used.has(fallback.id)) {
+            return instantiateScenario(Object.assign({}, fallback, { isAdaptive: true }), gameState.scenarioPtr, pack);
+        }
+        return generateTemplateScenario(gameState, gameState.scenarioPtr, pack);
+    }
+
+    function getScenarioAt(gameState, index, pack) {
+        if (gameState.scenarioCache[index]) {
+            return gameState.scenarioCache[index];
+        }
+        const adaptiveInterval = pack.adaptiveInterval || 9;
+        let scenario;
+        if (index > 0 && index % adaptiveInterval === 0) {
+            scenario = selectAdaptiveScenario(gameState, pack);
+        } else {
+            scenario = generateTemplateScenario(gameState, index, pack);
+        }
+        gameState.scenarioCache[index] = scenario;
+        return scenario;
+    }
+
+    function computeMapPosition(gameState) {
+        const p = gameState.profile;
+        const max = Math.max(
+            Math.abs(p.distributive), Math.abs(p.procedural), Math.abs(p.interactional),
+            gameState.responses.length, 1
+        );
+        const norm = function (v) {
+            return Math.round(((v / max) + 1) / 2 * 100);
+        };
+        return {
+            distributive: Math.min(100, Math.max(0, norm(p.distributive))),
+            procedural: Math.min(100, Math.max(0, norm(p.procedural))),
+            interactional: Math.min(100, Math.max(0, norm(p.interactional)))
+        };
+    }
+
+    function buildMetaTags(scenario) {
+        return '<div class="meta-tags">' +
+            '<span class="meta-tag tag-' + scenario.dimension + '">' + DIMENSION_LABELS[scenario.dimension] + '</span>' +
+            '<span class="meta-tag tag-' + scenario.perspective + '">' + PERSPECTIVE_LABELS[scenario.perspective] + '</span>' +
+            '<span class="meta-tag tag-' + scenario.role + '">' + ROLE_LABELS[scenario.role] + '</span>' +
+            '</div>';
+    }
+
+    function buildScenarioHTML(scenario, index, total) {
+        const progress = Math.round((index / total) * 100);
+        return '<div class="game-container">' +
+            '<div class="progress-text">第 ' + index + ' / ' + total + ' 轮</div>' +
+            '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + progress + '%"></div></div>' +
+            buildMetaTags(scenario) +
+            '<div class="scenario-narrative">' + scenario.narrative + '</div>' +
+            '<div class="scenario-question">' + scenario.question + '</div>' +
+            '</div>';
+    }
+
+    function buildMapHTML(gameState) {
+        const pos = computeMapPosition(gameState);
+        gameState.systemMapPosition = pos;
+        if (!gameState.mapPosition) {
+            gameState.mapPosition = Object.assign({}, pos);
+        }
+        return '<div class="game-container fairness-map-container">' +
+            '<div class="game-title">三维公平地图</div>' +
+            '<div class="game-subtitle">请确认您在公平空间中的位置</div>' +
+            '<p class="map-instruction">三个轴分别代表<strong>分配公平</strong>、<strong>程序公平</strong>、<strong>互动公平</strong>的关注程度。' +
+            '系统根据您前 ' + gameState.responses.length + ' 轮的选择估算了位置（蓝色点）。' +
+            '请拖动<strong>红色标记</strong>到您认为更符合自己公平观念的位置，确认后提交。</p>' +
+            '<div class="map-layout">' +
+            '<div class="map-canvas-wrap"><canvas id="fairness-map-canvas" width="520" height="420"></canvas></div>' +
+            '<div class="map-sliders">' +
+            sliderRow('分配公平', 'dist', pos.distributive) +
+            sliderRow('程序公平', 'proc', pos.procedural) +
+            sliderRow('互动公平', 'inter', pos.interactional) +
+            '</div></div>' +
+            '<div class="map-coords" id="map-coords-display"></div>' +
+            '<p class="map-hint">可旋转查看三维空间，也可直接使用右侧滑块微调。</p>' +
+            '<button type="button" class="jspsych-btn" id="fairness-map-confirm">确认我的公平位置</button>' +
+            '</div>';
+    }
+
+    function sliderRow(label, key, val) {
+        return '<div class="map-slider-row"><label>' + label + '：<span id="val-' + key + '">' + val + '</span></label>' +
+            '<input type="range" id="slider-' + key + '" min="0" max="100" value="' + val + '"></div>';
+    }
+
+    function initFairnessMap3D(gameState, finishTrial) {
+        const canvas = document.getElementById('fairness-map-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const pos = gameState.mapPosition;
+        let rotation = 0.55;
+        let dragging = false;
+
+        function project(x, y, z) {
+            const cx = 260, cy = 210, scale = 1.6;
+            const cos = Math.cos(rotation), sin = Math.sin(rotation);
+            const xr = x * cos - z * sin;
+            const zr = x * sin + z * cos;
+            return { px: cx + xr * scale, py: cy - y * scale + zr * 0.35 };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f7fafc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const ax = 90;
+            const o = project(0, 0, 0);
+            const xd = project(ax, 0, 0);
+            const yd = project(0, ax, 0);
+            const zd = project(0, 0, ax);
+
+            drawAxis(o, xd, '#4299e1', '分配公平');
+            drawAxis(o, yd, '#9f7aea', '程序公平');
+            drawAxis(o, zd, '#48bb78', '互动公平');
+
+            const sys = gameState.systemMapPosition;
+            const sp = project(sys.distributive - 50, sys.procedural - 50, sys.interactional - 50);
+            const mp = project(pos.distributive - 50, pos.procedural - 50, pos.interactional - 50);
+
+            drawPoint(sp.px, sp.py, '#4299e1', 9, '系统估计');
+            drawPoint(mp.px, mp.py, '#e53e3e', 11, '您的位置');
+            updateCoordsDisplay();
+        }
+
+        function drawAxis(from, to, color, label) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(from.px, from.py);
+            ctx.lineTo(to.px, to.py);
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.font = '12px Microsoft YaHei';
+            ctx.fillText(label, to.px + 4, to.py - 4);
+        }
+
+        function drawPoint(x, y, color, r, label) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.fillStyle = '#2d3748';
+            ctx.font = '11px Microsoft YaHei';
+            ctx.fillText(label, x + 12, y + 4);
+        }
+
+        function updateCoordsDisplay() {
+            const el = document.getElementById('map-coords-display');
+            if (el) {
+                el.textContent = '当前位置 — 分配:' + pos.distributive + '  程序:' + pos.procedural + '  互动:' + pos.interactional;
+            }
+        }
+
+        function syncSliders() {
+            ['dist', 'proc', 'inter'].forEach(function (key, i) {
+                const field = ['distributive', 'procedural', 'interactional'][i];
+                const slider = document.getElementById('slider-' + key);
+                const valEl = document.getElementById('val-' + key);
+                if (slider) {
+                    slider.value = pos[field];
+                    slider.oninput = function () {
+                        pos[field] = parseInt(slider.value, 10);
+                        if (valEl) valEl.textContent = pos[field];
+                        draw();
+                    };
+                }
+            });
+        }
+
+        canvas.addEventListener('mousedown', function () { dragging = true; });
+        global.addEventListener('mouseup', function () { dragging = false; });
+        canvas.addEventListener('mousemove', function (e) {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const dx = (e.clientX - rect.left - 260) / 1.6;
+            const dy = (210 - (e.clientY - rect.top)) / 1.6;
+            pos.distributive = Math.min(100, Math.max(0, Math.round(dx + 50)));
+            pos.procedural = Math.min(100, Math.max(0, Math.round(dy + 50)));
+            syncSliders();
+            draw();
+        });
+        canvas.addEventListener('wheel', function (e) {
+            e.preventDefault();
+            rotation += e.deltaY * 0.004;
+            draw();
+        });
+
+        syncSliders();
+        draw();
+
+        const confirmBtn = document.getElementById('fairness-map-confirm');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function () {
+                gameState.mapConfirmed = true;
+                gameState.mapPosition = Object.assign({}, pos);
+                finishTrial({
+                    map_distributive: pos.distributive,
+                    map_procedural: pos.procedural,
+                    map_interactional: pos.interactional,
+                    system_distributive: gameState.systemMapPosition.distributive,
+                    system_procedural: gameState.systemMapPosition.procedural,
+                    system_interactional: gameState.systemMapPosition.interactional
+                });
+            });
+        }
+    }
+
+    function buildProfileSummary(gameState) {
+        const pos = gameState.mapPosition || computeMapPosition(gameState);
+        const p = gameState.profile;
+        const dims = {
+            '分配公平': p.distributive,
+            '程序公平': p.procedural,
+            '互动公平': p.interactional
+        };
+        const sorted = Object.entries(dims).sort(function (a, b) { return b[1] - a[1]; });
+        let dominant = sorted[0][1] > 0 ? sorted[0][0] + '导向' : '综合型';
+
+        let tendency = '温和型';
+        if (p.rejectUnfair >= 15) tendency = '原则坚守型';
+        else if (p.intervene >= 15) tendency = '积极介入型';
+        else if (p.acceptUnfair >= 15) tendency = '务实接受型';
+        else if (p.voiceConcern >= 15) tendency = '发声表达型';
+
+        return '<div class="game-container">' +
+            '<div class="game-title">测试完成</div>' +
+            '<div class="game-subtitle">您的公平观念画像</div>' +
+            '<div class="summary-card"><h4>主导公平维度：' + dominant + '</h4><h4>行为倾向：' + tendency + '</h4></div>' +
+            '<div class="summary-card"><h4>您确认的三维公平位置</h4>' +
+            '<p>分配公平：' + pos.distributive + '　程序公平：' + pos.procedural + '　互动公平：' + pos.interactional + '</p></div>' +
+            '<p style="text-align:center;color:#718096;">共完成 ' + gameState.responses.length + ' 轮对话。数据将自动下载。</p>' +
+            '<p style="text-align:center;">按任意键结束。</p></div>';
+    }
+
+    function downloadCSV(csvContent, filename) {
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+
+    function exportData(gameState, pack) {
+        const headers = [
+            'subjectID', 'scenarioIndex', 'scenarioId', 'dimension', 'perspective', 'role',
+            'isAdaptive', 'choiceKey', 'choiceText', 'fairnessRatings', 'textResponse',
+            'rt_choice', 'rt_rating', 'rt_text', 'timestamp'
+        ];
+        let csv = headers.join(',') + '\n';
+        gameState.responses.forEach(function (r) {
+            csv += headers.map(function (h) {
+                let v = r[h];
+                if (v === undefined || v === null) v = '';
+                if (typeof v === 'object') v = JSON.stringify(v);
+                v = String(v).replace(/"/g, '""');
+                if (/[,"\n]/.test(v)) v = '"' + v + '"';
+                return v;
+            }).join(',') + '\n';
+        });
+
+        const profileHeaders = [
+            'subjectID', 'version', 'totalRounds',
+            'distributive', 'procedural', 'interactional',
+            'map_distributive', 'map_procedural', 'map_interactional',
+            'system_distributive', 'system_procedural', 'system_interactional',
+            'acceptUnfair', 'rejectUnfair', 'intervene', 'voiceConcern'
+        ];
+        let profileCSV = profileHeaders.join(',') + '\n';
+        const mp = gameState.mapPosition || {};
+        const sp = gameState.systemMapPosition || {};
+        profileCSV += [
+            gameState.subjectID, pack.id, gameState.config.totalRounds,
+            gameState.profile.distributive, gameState.profile.procedural, gameState.profile.interactional,
+            mp.distributive || '', mp.procedural || '', mp.interactional || '',
+            sp.distributive || '', sp.procedural || '', sp.interactional || '',
+            gameState.profile.acceptUnfair, gameState.profile.rejectUnfair,
+            gameState.profile.intervene, gameState.profile.voiceConcern
+        ].join(',') + '\n';
+
+        const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const prefix = pack.exportPrefix || 'FairnessGame';
+        downloadCSV(csv, prefix + '_' + gameState.subjectID + '_' + ts + '.csv');
+        downloadCSV(profileCSV, prefix + '_Profile_' + gameState.subjectID + '_' + ts + '.csv');
+    }
+
+    function shouldCollectText(roundIndex, config) {
+        const interval = config.textInterval || 6;
+        return (roundIndex + 1) % interval === 0 || roundIndex === config.totalRounds - 1;
+    }
+
+    function getButtonHtml(config) {
+        if (config && config.online) {
+            return '<button class="jspsych-btn choice-btn">%choice%</button>';
+        }
+        return function (choice) {
+            return '<button class="jspsych-btn choice-btn">' + choice + '</button>';
+        };
+    }
+
+    function buildTimeline(gameState, pack, jsPsych) {
+        const config = gameState.config;
+        const timeline = [];
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: config.welcomeHTML,
+            choices: [' ']
+        });
+
+        timeline.push({
+            type: jsPsychSurveyText,
+            questions: [
+                { prompt: '请输入您的被试编号（Subject ID）：', name: 'subjectID', required: true, rows: 1, columns: 30 }
+            ],
+            data: { trial_type: 'subject_id' },
+            on_finish: function (data) {
+                gameState.subjectID = (data.response.subjectID || '').trim() || 'unknown';
+                jsPsych.data.addProperties({ subjectID: gameState.subjectID, version: pack.id });
+            }
+        });
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: config.instructionHTML,
+            choices: [' ']
+        });
+
+        timeline.push({
+            type: jsPsychCallFunction,
+            func: function () {
+                gameState.scenarioPtr = 0;
+                gameState.scenarioCache = {};
+                gameState.currentRecord = {};
+            }
+        });
+
+        const scenarioLoop = {
+            timeline: [
+                {
+                    type: jsPsychHtmlButtonResponse,
+                    stimulus: function () {
+                        const scenario = getScenarioAt(gameState, gameState.scenarioPtr, pack);
+                        return buildScenarioHTML(scenario, gameState.scenarioPtr + 1, config.totalRounds);
+                    },
+                    choices: function () {
+                        return getScenarioAt(gameState, gameState.scenarioPtr, pack).choices.map(function (c) { return c.text; });
+                    },
+                    button_html: getButtonHtml(config),
+                    data: function () {
+                        const scenario = getScenarioAt(gameState, gameState.scenarioPtr, pack);
+                        return {
+                            trial_type: 'scenario_choice',
+                            scenario_id: scenario.id,
+                            round: gameState.scenarioPtr + 1
+                        };
+                    },
+                    on_finish: function (data) {
+                        const scenario = getScenarioAt(gameState, gameState.scenarioPtr, pack);
+                        const choice = scenario.choices[data.response];
+                        gameState.currentRecord = {
+                            choiceKey: choice.key,
+                            choiceText: choice.text,
+                            rt_choice: data.rt,
+                            scenario: scenario
+                        };
+                        updateProfile(gameState, choice.tags);
+                    }
+                },
+                {
+                    type: jsPsychSurveyLikert,
+                    preamble: '<div class="game-container"><div class="rating-prompt">请对本轮情境的公平程度评分（1=极不公平，5=极公平）</div></div>',
+                    questions: function () {
+                        const scenario = getScenarioAt(gameState, gameState.scenarioPtr, pack);
+                        return scenario.ratings.map(function (label, i) {
+                            return {
+                                prompt: label,
+                                name: 'Q' + i,
+                                labels: ['1', '2', '3', '4', '5'],
+                                required: true
+                            };
+                        });
+                    },
+                    data: { trial_type: 'scenario_rating' },
+                    on_finish: function (data) {
+                        const scenario = getScenarioAt(gameState, gameState.scenarioPtr, pack);
+                        const ratings = {};
+                        scenario.ratings.forEach(function (label, i) {
+                            ratings[label] = parseInt(data.response['Q' + i], 10) + 1;
+                        });
+                        gameState.currentRecord.fairnessRatings = ratings;
+                        gameState.currentRecord.rt_rating = data.rt;
+                    }
+                },
+                {
+                    timeline: [{
+                        type: jsPsychSurveyText,
+                        questions: [
+                            { prompt: '请简要描述：您为何做出上述选择？什么对您而言是"公平"的？', name: 'Q0', rows: 3, columns: 60, required: true }
+                        ],
+                        data: { trial_type: 'scenario_text' },
+                        on_finish: function (data) {
+                            gameState.currentRecord.textResponse = data.response.Q0 || Object.values(data.response)[0];
+                            gameState.currentRecord.rt_text = data.rt;
+                        }
+                    }],
+                    conditional_function: function () {
+                        return shouldCollectText(gameState.scenarioPtr, config);
+                    }
+                },
+                {
+                    type: jsPsychCallFunction,
+                    func: function () {
+                        const rec = gameState.currentRecord;
+                        const scenario = rec.scenario;
+                        gameState.responses.push({
+                            subjectID: gameState.subjectID,
+                            scenarioIndex: gameState.scenarioPtr + 1,
+                            scenarioId: scenario.id,
+                            dimension: scenario.dimension,
+                            perspective: scenario.perspective,
+                            role: scenario.role,
+                            isAdaptive: scenario.isAdaptive,
+                            choiceKey: rec.choiceKey,
+                            choiceText: rec.choiceText,
+                            fairnessRatings: rec.fairnessRatings,
+                            textResponse: rec.textResponse || '',
+                            rt_choice: rec.rt_choice,
+                            rt_rating: rec.rt_rating,
+                            rt_text: rec.rt_text || null,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
+            ],
+            loop_function: function () {
+                gameState.scenarioPtr++;
+                gameState.currentRecord = {};
+                return gameState.scenarioPtr < config.totalRounds;
+            }
+        };
+
+        timeline.push(scenarioLoop);
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () { return buildMapHTML(gameState); },
+            choices: 'NO_KEYS',
+            trial_duration: null,
+            response_ends_trial: false,
+            on_load: function () {
+                initFairnessMap3D(gameState, function (mapData) {
+                    jsPsych.finishTrial(Object.assign({ trial_type: 'fairness_map' }, mapData));
+                });
+            },
+            data: { trial_type: 'fairness_map' }
+        });
+
+        timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function () { return buildProfileSummary(gameState); },
+            choices: [' '],
+            on_finish: function () { exportData(gameState, pack); },
+            data: { trial_type: 'debrief' }
+        });
+
+        return timeline;
+    }
+
+    function runFairnessGame(config, pack) {
+        const params = new URLSearchParams(global.location.search);
+        if (params.get('rounds')) {
+            config.totalRounds = parseInt(params.get('rounds'), 10) || config.totalRounds;
+        }
+        const gameState = createGameState(config);
+        const jsPsych = initJsPsych({ on_finish: function () {} });
+        jsPsych.run(buildTimeline(gameState, pack, jsPsych));
+    }
+
+    global.FairnessGameCore = {
+        run: runFairnessGame,
+        DIMENSION_LABELS: DIMENSION_LABELS,
+        PERSPECTIVE_LABELS: PERSPECTIVE_LABELS,
+        ROLE_LABELS: ROLE_LABELS,
+        templateKey: templateKey
+    };
+})(window);
+
+</script>
+<script>
+FairnessGameCore.run({
+    online: true,
+    totalRounds: 72,
+    textInterval: 6,
+    welcomeHTML: `<div class="game-container">
+        <div class="game-title">公平观念互动测试</div>
+        <div class="game-subtitle">通用生活版 · 在线单文件版</div>
+        <div class="instruction-list">
+            <p>欢迎参加公平观念互动测试。本测试通过 <strong>72 轮</strong>生活化对话场景，了解您对公平的理解。</p>
+            <p>本页面为<strong>在线自包含版本</strong>，无需本地 jsPsych 包，打开链接即可运行。</p>
+            <p>三个公平维度：分配公平、程序公平、互动公平。结束后在三维公平地图上确认您的位置。</p>
+            <p>全程约 60–90 分钟。按 <strong>空格键</strong> 开始。</p>
+        </div>
+    </div>`,
+    instructionHTML: `<div class="game-container">
+        <div class="game-title">测试说明</div>
+        <div class="instruction-list">
+            <p>每轮：阅读场景 → 做出选择 → 公平性评分。每 6 轮一次文字描述。共 <strong>72 轮</strong>。</p>
+            <p>按 <strong>空格键</strong> 继续。</p>
+        </div>
+    </div>`
+}, window.FAIRNESS_SCENARIO_PACK);
+</script>
+</html>
