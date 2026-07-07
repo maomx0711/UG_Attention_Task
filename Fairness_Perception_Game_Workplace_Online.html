@@ -1,3 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公平观念互动测试（职场工作版 · 在线）</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+    <style>
+body {
+    user-select: none;
+    background-color: #f0f4f8;
+    color: #2d3748;
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    font-size: 16pt;
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+}
+
+.jspsych-content { max-width: 920px; margin: auto; }
+
+.jspsych-btn {
+    font-size: 14pt;
+    font-family: inherit;
+    margin: 0.4em;
+    padding: 12px 28px;
+    border-radius: 8px;
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 120px;
+}
+
+.jspsych-btn:hover {
+    background-color: #3d5d8a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
+}
+
+.game-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 40px;
+    margin: 20px auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.game-title {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #2c5282;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.game-subtitle {
+    font-size: 13pt;
+    color: #718096;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.meta-tag {
+    font-size: 11pt;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.tag-distributive { background: #ebf8ff; color: #2b6cb0; }
+.tag-procedural { background: #faf5ff; color: #6b46c1; }
+.tag-interactional { background: #f0fff4; color: #276749; }
+.tag-victim { background: #fff5f5; color: #c53030; }
+.tag-beneficiary { background: #fffff0; color: #b7791f; }
+.tag-bystander { background: #f7fafc; color: #4a5568; }
+.tag-participant { background: #e6fffa; color: #285e61; }
+.tag-dominator { background: #fffaf0; color: #c05621; }
+
+.scenario-narrative {
+    background: #f7fafc;
+    border-left: 4px solid #4a6fa5;
+    padding: 20px 24px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 15pt;
+    line-height: 1.8;
+}
+
+.scenario-question {
+    font-size: 16pt;
+    font-weight: 600;
+    text-align: center;
+    margin: 24px 0 16px;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a6fa5, #63b3ed);
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+    margin-bottom: 8px;
+}
+
+.choice-btn {
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    margin: 10px auto;
+    text-align: left;
+    padding: 16px 24px !important;
+    font-size: 14pt !important;
+    line-height: 1.5;
+    white-space: normal;
+}
+
+.rating-prompt {
+    text-align: center;
+    font-size: 14pt;
+    color: #4a5568;
+    margin: 16px 0;
+}
+
+.instruction-list { text-align: left; max-width: 720px; margin: 0 auto; }
+.instruction-list li { margin: 10px 0; }
+
+.summary-card {
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+}
+
+.summary-card h4 { margin: 0 0 8px; color: #2c5282; }
+
+/* 三维公平地图 */
+.fairness-map-container { max-width: 960px; }
+
+.map-instruction {
+    font-size: 14pt;
+    color: #4a5568;
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.map-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.map-canvas-wrap {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    cursor: crosshair;
+}
+
+#fairness-map-canvas { display: block; }
+
+.map-sliders {
+    flex: 1;
+    min-width: 220px;
+    max-width: 280px;
+}
+
+.map-slider-row {
+    margin: 16px 0;
+}
+
+.map-slider-row label {
+    display: block;
+    font-size: 13pt;
+    margin-bottom: 6px;
+    color: #4a5568;
+}
+
+.map-slider-row input[type="range"] {
+    width: 100%;
+    accent-color: #4a6fa5;
+}
+
+.map-coords {
+    text-align: center;
+    font-size: 13pt;
+    color: #2c5282;
+    font-weight: 600;
+    margin: 16px 0;
+}
+
+.map-hint {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+}
+
+#fairness-map-confirm {
+    display: block;
+    margin: 20px auto 0;
+    font-size: 15pt;
+    padding: 14px 36px;
+}
+
+#jspsych-survey-likert-form p { font-size: 14pt; }
+
+@media (max-width: 640px) {
+    .game-container { padding: 20px 16px; }
+    #fairness-map-canvas { width: 100%; height: auto; }
+}
+
+    </style>
+</head>
+<body></body>
+<script>
+/**
+ * 职场工作版 — 公平测试场景库（18组合 × 4变体 = 72轮）
+ */
+(function (global) {
+    'use strict';
+
+    const RATINGS = ['分配公平程度', '程序公平程度', '互动公平程度'];
+
+    const C = {
+        victimReject: [
+            { key: 'reject', text: '向 HR 或上级正式申诉，要求重新评估', tags: { rejectUnfair: 2, distributive: 2, voiceConcern: 2 } },
+            { key: 'negotiate', text: '与主管一对一沟通，提出重新分配', tags: { voiceConcern: 2, distributive: 1 } },
+            { key: 'reluctant', text: '不满但接受，避免影响考核', tags: { acceptUnfair: 1 } },
+            { key: 'accept', text: '接受安排，专注本职工作', tags: { acceptUnfair: 2 } }
+        ],
+        dominatorFair: [
+            { key: 'fair', text: '按公开标准公正分配', tags: { distributive: 2, procedural: 2 } },
+            { key: 'balanced', text: '综合考量但保持透明', tags: { distributive: 1, procedural: 1 } },
+            { key: 'favor', text: '倾向核心下属或关系更近者', tags: { acceptUnfair: -2, distributive: -2 } },
+            { key: 'self', text: '优先保障自己部门/个人利益', tags: { acceptUnfair: -3 } }
+        ],
+        bystanderAct: [
+            { key: 'intervene', text: '在会议或邮件中提出质疑', tags: { intervene: 2, voiceConcern: 2 } },
+            { key: 'private', text: '私下支持受影响同事', tags: { voiceConcern: 1 } },
+            { key: 'silent', text: '不介入，避免站队', tags: { acceptUnfair: 1 } },
+            { key: 'support_mgmt', text: '支持管理层决定', tags: { acceptUnfair: 2 } }
+        ],
+        procVictim: [
+            { key: 'appeal', text: '要求公开评选标准并申诉', tags: { rejectUnfair: 2, procedural: 2, voiceConcern: 2 } },
+            { key: 'hr', text: '向 HR 反映程序问题', tags: { procedural: 1, voiceConcern: 1 } },
+            { key: 'transfer', text: '考虑转岗或离职', tags: { rejectUnfair: 1 } },
+            { key: 'accept', text: '接受结果，结果比过程重要', tags: { acceptUnfair: 1, prioritizeOutcome: 2 } }
+        ],
+        interVictim: [
+            { key: 'confront', text: '与主管沟通指出不尊重对待', tags: { voiceConcern: 2, interactional: 2 } },
+            { key: 'hr_report', text: '向 HR 记录并反映', tags: { voiceConcern: 2, procedural: 1 } },
+            { key: 'avoid', text: '减少与该上级互动', tags: { acceptUnfair: 1 } },
+            { key: 'adjust', text: '调整自身沟通方式', tags: { acceptUnfair: 1 } }
+        ]
+    };
+
+    function tpl(narratives, question, choices) {
+        return narratives.map(function (n) {
+            return { narrative: n, question: question, choices: choices, ratings: RATINGS };
+        });
+    }
+
+    const templates = {
+        distributive_victim_participant: tpl([
+            '你与同事共同完成季度项目，经理宣布奖金分配：对方 5 万，你 1 万，理由是其"牵头"，但你认为贡献相当。',
+            '部门年终奖按职级发放，你与同职级同事工作量相当，但对方因"潜力"获更高系数。',
+            '销售提成结算中，你开发的客户被划给另一位同事，提成也随客户转移。',
+            '加班补贴申报中，你与同事加班时长相近，但你的申请被驳回，对方的却通过。'
+        ], '面对这种职场分配，你会怎么做？', C.victimReject),
+
+        distributive_beneficiary_dominator: tpl([
+            '你是部门经理，需在两名下属间分配 8 万元项目奖金，工作量相当，一位是你的心腹。',
+            '你是项目负责人，需在组内分配署名顺序和奖金比例，有人私下找你"打招呼"。',
+            '裁员补偿预算有限，你需决定留用名额与补偿金额，两名员工绩效相近。',
+            '团建经费 2 万元，你决定如何在各小组间分配，其中一组与你关系更密切。'
+        ], '作为支配者，你会如何分配？', C.dominatorFair),
+
+        distributive_bystander_participant: tpl([
+            '部门会议上，经理将优质客户资源全部分给某同事，其他同事未获解释，你在场目睹。',
+            '你听说 HR 将晋升名额内定给领导的亲戚，同期入职的同事议论纷纷。',
+            '跨部门协作中，功劳被某团队独占，实际参与的你的部门同事未获认可，你知情。',
+            '年终奖发放后，同岗同事发现分配差异巨大，有人当面质疑，经理未回应。'
+        ], '作为职场旁观者，你会如何反应？', C.bystanderAct),
+
+        procedural_victim_participant: tpl([
+            '年度评优未公布标准，结果宣布你未入选，后发现评委与获奖者关系密切。',
+            '晋升答辩中你的陈述时间被压缩，另一位候选人获额外提问机会。',
+            '绩效考核指标在年末临时调整，你在新指标下评级下降。',
+            '部门竞聘采用"内部推荐"，你未获推荐机会，岗位给了领导赏识的人。'
+        ], '你认为这个职场程序公平吗？', C.procVictim),
+
+        procedural_beneficiary_dominator: tpl([
+            '你是晋升委员会成员，可决定走完整答辩流程，或直接推荐关系好的候选人。',
+            '你是 HRBP，裁员名单可由你按规章评估，也可按领导意向"优化"。',
+            '招聘终面你有否决权，可坚持结构化面试，也可"感觉不对"直接否掉。',
+            '项目评优你掌握流程设计权，可公开投票，也可私下征求领导意见后定案。'
+        ], '你会如何设计/执行决策程序？', [
+            { key: 'full', text: '坚持完整、透明、可申诉的流程', tags: { procedural: 2 } },
+            { key: 'simplified', text: '简化流程但公开标准', tags: { procedural: 1 } },
+            { key: 'favor', text: '走形式，实质内定', tags: { procedural: -2, acceptUnfair: -2 } },
+            { key: 'outcome', text: '结果导向，程序从简', tags: { prioritizeOutcome: 1 } }
+        ]),
+
+        procedural_bystander_participant: tpl([
+            '全公司大会上，领导临时修改评优规则，你观察到部分同事面露不满。',
+            '招聘面试中，面试官对某校毕业生明显更宽松，你在旁协助记录。',
+            '部门周会上，决议在未充分讨论下被领导快速通过，你参与了会议。',
+            '360 评估中，有人被恶意低分，你知晓评分者与被评者有过节。'
+        ], '你如何看待这个程序？', C.bystanderAct),
+
+        interactional_victim_participant: tpl([
+            '周会上你提方案被总监当众否定，随后另一位同事提类似方案却获认可。',
+            '邮件中你请示工作，主管回复冷淡；对另一位同事类似请示则耐心指导。',
+            '团建活动中你的贡献未被提及，同事的类似贡献被领导点名表扬。',
+            '绩效面谈中，主管对你使用指责语气，对另一位犯类似错误的同事则温和。'
+        ], '面对这种职场互动，你会如何反应？', C.interVictim),
+
+        interactional_beneficiary_dominator: tpl([
+            '你是主管，两名下属犯类似错误：心腹迟到，另一人报告格式有误，你决定如何批评。',
+            '你是项目经理，组员汇报时你频繁打断某人，对另一人则耐心听完。',
+            '你是 HR，处理投诉时对熟人轻描淡写，对陌生人则从严处理。',
+            '你是部门负责人，在全员会上表扬谁、批评谁，你有完全自主权。'
+        ], '你会如何处理与下属/同事的互动？', [
+            { key: 'equal', text: '一视同仁，私下平等沟通', tags: { interactional: 2, procedural: 1 } },
+            { key: 'context', text: '因人因事但态度一致', tags: { interactional: 1 } },
+            { key: 'favor', text: '对亲信更宽容', tags: { interactional: -2, acceptUnfair: -2 } },
+            { key: 'public', text: '当众区别对待以立威', tags: { interactional: -3 } }
+        ]),
+
+        interactional_bystander_participant: tpl([
+            '会议上新人被领导当众嘲讽，资深同事犯类似错误却无人提及，你在场。',
+            '茶水间听到主管对某员工有人身攻击式批评，你对该员工印象良好。',
+            '跨部门协作中，对方负责人对你的同事态度傲慢，对你却客气，你目睹。',
+            '公司群里有人被公开点名批评，你知道责任实际在另一部门。'
+        ], '作为旁观者，你会怎么做？', C.bystanderAct)
+    };
+
+    templates.distributive_victim_dominator = templates.distributive_beneficiary_dominator;
+    templates.distributive_beneficiary_participant = templates.distributive_victim_participant;
+    templates.distributive_bystander_dominator = templates.distributive_beneficiary_dominator;
+    templates.procedural_victim_dominator = templates.procedural_beneficiary_dominator;
+    templates.procedural_beneficiary_participant = templates.procedural_victim_participant;
+    templates.procedural_bystander_dominator = templates.procedural_beneficiary_dominator;
+    templates.interactional_victim_dominator = templates.interactional_beneficiary_dominator;
+    templates.interactional_beneficiary_participant = templates.interactional_victim_participant;
+    templates.interactional_bystander_dominator = templates.interactional_beneficiary_dominator;
+
+    const adaptive = {
+        followup_promotion: {
+            id: 'wp_followup_promotion',
+            dimension: 'procedural', perspective: 'victim', role: 'participant',
+            trigger: function (p) { return p.procedural >= 4 || p.rejectUnfair >= 4; },
+            narrative: '【后续】你曾多次质疑不公。这次晋升答辩流程规范，但评委主任是竞争对手的导师，你未获晋升。',
+            question: '你会怎么做？',
+            choices: [
+                { key: 'accept', text: '接受，程序合规', tags: { procedural: 2 } },
+                { key: 'appeal', text: '申诉利益冲突问题', tags: { rejectUnfair: 2, voiceConcern: 2 } },
+                { key: 'leave', text: '考虑跳槽', tags: { rejectUnfair: 1 } },
+                { key: 'silent', text: '沉默，继续工作', tags: { acceptUnfair: 1 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_credit: {
+            id: 'wp_followup_credit',
+            dimension: 'distributive', perspective: 'victim', role: 'participant',
+            trigger: function (p) { return p.distributive >= 4; },
+            narrative: '【后续】你重视分配公平。领导让你"配合"将项目功劳让给更有背景的同事，承诺下次补偿你。',
+            question: '你会如何回应？',
+            choices: [
+                { key: 'refuse', text: '拒绝，要求如实记录贡献', tags: { rejectUnfair: 2, voiceConcern: 2 } },
+                { key: 'deal', text: '这次配合，换取下次机会', tags: { acceptUnfair: 1 } },
+                { key: 'document', text: '留证并向 HR 备案', tags: { voiceConcern: 2, procedural: 1 } },
+                { key: 'accept', text: '接受，避免得罪领导', tags: { acceptUnfair: 2 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_whistleblow: {
+            id: 'wp_followup_whistleblow',
+            dimension: 'interactional', perspective: 'bystander', role: 'participant',
+            trigger: function (p) { return p.intervene >= 4; },
+            narrative: '【后续】你曾多次为同事发声。这次发现部门存在系统性加班不补偿，多人敢怒不敢言。',
+            question: '你会怎么做？',
+            choices: [
+                { key: 'collective', text: '联合同事向劳动监察或 HR 反映', tags: { intervene: 2, voiceConcern: 2 } },
+                { key: 'individual', text: '个人匿名举报', tags: { voiceConcern: 1 } },
+                { key: 'negotiate', text: '与主管私下协商', tags: { voiceConcern: 1 } },
+                { key: 'silent', text: '不介入，保护自己', tags: { acceptUnfair: 1 } }
+            ],
+            ratings: RATINGS
+        },
+        followup_mixed: {
+            id: 'wp_followup_mixed',
+            dimension: 'procedural', perspective: 'bystander', role: 'participant',
+            trigger: function () { return true; },
+            narrative: '【综合】公司宣布"优化"裁员，名单未经过公示程序，你同事在列，他司龄长且绩效中等。',
+            question: '你会怎么做？',
+            choices: [
+                { key: 'support', text: '协助同事争取合法补偿和透明流程', tags: { intervene: 2, procedural: 2 } },
+                { key: 'private', text: '私下安慰并提供求职帮助', tags: { voiceConcern: 1 } },
+                { key: 'relief', text: '庆幸不是自己，保持沉默', tags: { acceptUnfair: 1 } },
+                { key: 'justify', text: '认为公司有权决定', tags: { acceptUnfair: 2 } }
+            ],
+            ratings: RATINGS
+        }
+    };
+
+    global.FAIRNESS_SCENARIO_PACK = {
+        id: 'workplace',
+        exportPrefix: 'FairnessGame_Workplace',
+        adaptiveInterval: 9,
+        templates: templates,
+        adaptive: adaptive,
+        fallback: {
+            id: 'wp_fallback',
+            dimension: 'procedural', perspective: 'bystander', role: 'participant',
+            narrative: '职场中你遇到一起涉及公平争议的事件，需要做出反应。',
+            question: '你通常会怎么做？',
+            choices: C.bystanderAct,
+            ratings: RATINGS
+        }
+    };
+})(window);
+
+</script>
+<script>
 /**
  * 公平观念互动测试 — 共享引擎
  * 支持 72 轮对话、自适应分支、三维公平地图确认
@@ -622,3 +1078,29 @@
         templateKey: templateKey
     };
 })(window);
+
+</script>
+<script>
+FairnessGameCore.run({
+    online: true,
+    totalRounds: 72,
+    textInterval: 6,
+    welcomeHTML: `<div class="game-container">
+        <div class="game-title">公平观念互动测试</div>
+        <div class="game-subtitle">职场工作版 · 在线单文件版</div>
+        <div class="instruction-list">
+            <p>欢迎参加<strong>职场版</strong>公平观念测试。<strong>72 轮</strong>工作场景，无需本地安装任何依赖。</p>
+            <p>涵盖奖金、晋升、绩效、上下级互动、裁员等情境。结束后确认三维公平地图位置。</p>
+            <p>按 <strong>空格键</strong> 开始。</p>
+        </div>
+    </div>`,
+    instructionHTML: `<div class="game-container">
+        <div class="game-title">职场版测试说明</div>
+        <div class="instruction-list">
+            <p>每轮：职场情境 → 选择行动 → 三维公平评分。每 6 轮文字说明。共 <strong>72 轮</strong>。</p>
+            <p>按 <strong>空格键</strong> 继续。</p>
+        </div>
+    </div>`
+}, window.FAIRNESS_SCENARIO_PACK);
+</script>
+</html>
