@@ -1,0 +1,227 @@
+body {
+    user-select: none;
+    background-color: #f0f4f8;
+    color: #2d3748;
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    font-size: 16pt;
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+}
+
+.jspsych-content { max-width: 920px; margin: auto; }
+
+.jspsych-btn {
+    font-size: 14pt;
+    font-family: inherit;
+    margin: 0.4em;
+    padding: 12px 28px;
+    border-radius: 8px;
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 120px;
+}
+
+.jspsych-btn:hover {
+    background-color: #3d5d8a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
+}
+
+.game-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 40px;
+    margin: 20px auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.game-title {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #2c5282;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.game-subtitle {
+    font-size: 13pt;
+    color: #718096;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.meta-tag {
+    font-size: 11pt;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.tag-distributive { background: #ebf8ff; color: #2b6cb0; }
+.tag-procedural { background: #faf5ff; color: #6b46c1; }
+.tag-interactional { background: #f0fff4; color: #276749; }
+.tag-victim { background: #fff5f5; color: #c53030; }
+.tag-beneficiary { background: #fffff0; color: #b7791f; }
+.tag-bystander { background: #f7fafc; color: #4a5568; }
+.tag-participant { background: #e6fffa; color: #285e61; }
+.tag-dominator { background: #fffaf0; color: #c05621; }
+
+.scenario-narrative {
+    background: #f7fafc;
+    border-left: 4px solid #4a6fa5;
+    padding: 20px 24px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 15pt;
+    line-height: 1.8;
+}
+
+.scenario-question {
+    font-size: 16pt;
+    font-weight: 600;
+    text-align: center;
+    margin: 24px 0 16px;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a6fa5, #63b3ed);
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+    margin-bottom: 8px;
+}
+
+.choice-btn {
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    margin: 10px auto;
+    text-align: left;
+    padding: 16px 24px !important;
+    font-size: 14pt !important;
+    line-height: 1.5;
+    white-space: normal;
+}
+
+.rating-prompt {
+    text-align: center;
+    font-size: 14pt;
+    color: #4a5568;
+    margin: 16px 0;
+}
+
+.instruction-list { text-align: left; max-width: 720px; margin: 0 auto; }
+.instruction-list li { margin: 10px 0; }
+
+.summary-card {
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+}
+
+.summary-card h4 { margin: 0 0 8px; color: #2c5282; }
+
+/* 三维公平地图 */
+.fairness-map-container { max-width: 960px; }
+
+.map-instruction {
+    font-size: 14pt;
+    color: #4a5568;
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.map-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.map-canvas-wrap {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    cursor: crosshair;
+}
+
+#fairness-map-canvas { display: block; }
+
+.map-sliders {
+    flex: 1;
+    min-width: 220px;
+    max-width: 280px;
+}
+
+.map-slider-row {
+    margin: 16px 0;
+}
+
+.map-slider-row label {
+    display: block;
+    font-size: 13pt;
+    margin-bottom: 6px;
+    color: #4a5568;
+}
+
+.map-slider-row input[type="range"] {
+    width: 100%;
+    accent-color: #4a6fa5;
+}
+
+.map-coords {
+    text-align: center;
+    font-size: 13pt;
+    color: #2c5282;
+    font-weight: 600;
+    margin: 16px 0;
+}
+
+.map-hint {
+    text-align: center;
+    font-size: 12pt;
+    color: #a0aec0;
+}
+
+#fairness-map-confirm {
+    display: block;
+    margin: 20px auto 0;
+    font-size: 15pt;
+    padding: 14px 36px;
+}
+
+#jspsych-survey-likert-form p { font-size: 14pt; }
+
+@media (max-width: 640px) {
+    .game-container { padding: 20px 16px; }
+    #fairness-map-canvas { width: 100%; height: auto; }
+}
