@@ -1,0 +1,58 @@
+.vr-panel {
+    margin: 14px 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px dashed var(--vr-accent, #5c9fd4);
+    background: rgba(92, 159, 212, 0.06);
+    text-align: left;
+}
+.vr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.vr-title { font-size: 0.9rem; font-weight: 700; color: var(--vr-accent, #5c9fd4); }
+.vr-status { font-size: 0.78rem; color: #8899aa; }
+.vr-status.vr-live { color: #e53935; font-weight: 700; }
+.vr-status.vr-done { color: #43a047; }
+.vr-hint { font-size: 0.75rem; color: #8899aa; margin-bottom: 10px; line-height: 1.5; }
+.vr-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.vr-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #3a4a6a;
+    background: #1e3050;
+    color: #ddd;
+    font-size: 0.82rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+.vr-btn:hover:not(:disabled) { border-color: var(--vr-accent, #5c9fd4); background: #253a58; }
+.vr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.vr-btn-record.vr-recording, .vr-panel.vr-recording .vr-btn-record {
+    border-color: #e53935;
+    color: #ffcdd2;
+}
+.vr-wave {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 20px;
+    margin-top: 10px;
+}
+.vr-wave span {
+    width: 4px;
+    background: #e53935;
+    border-radius: 2px;
+    animation: vr-bounce 0.6s ease-in-out infinite alternate;
+}
+.vr-wave span:nth-child(2) { animation-delay: 0.1s; }
+.vr-wave span:nth-child(3) { animation-delay: 0.2s; }
+.vr-wave span:nth-child(4) { animation-delay: 0.3s; }
+.vr-wave span:nth-child(5) { animation-delay: 0.4s; }
+@keyframes vr-bounce {
+    from { height: 6px; }
+    to { height: 18px; }
+}

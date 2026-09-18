@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>公平认知地图 — 角色扮演任务</title>
+<link href="js/voice-recorder.css" rel="stylesheet" type="text/css" />
+<script src="js/voice-recorder.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -379,7 +381,9 @@ function initState() {
   state.choiceLog = [];
   state.evalIndex = 0;
   state.evaluations = {};
+  state.evalAudio = {};
   state.overallEval = '';
+  state.overallAudio = null;
   state.perceived = {};
   CHARACTERS.forEach(c => {
     state.perceived[c.id] = { distrib: 0, proced: 0, interact: 0 };
@@ -434,8 +438,8 @@ function renderIntro() {
     { text: '你需要通过<strong>互动</strong>来感知每个人在三个公平维度上的位置：<br>'
       + '<span style="color:#64b5f6">分配公平</span> · <span style="color:#81c784">程序公平</span> · <span style="color:#f48fb1">互动公平</span><br>'
       + '你看不到他们的"公平坐标"，只能凭直觉感受。' },
-    { text: '你将进行 <strong>27 次互动</strong>（每位角色 3 次），每次选择你的回应方式。<br>互动结束后，请用文字<strong>评价每位角色</strong>在三个公平维度上的表现。' },
-    { text: '⚠️ 没有标准答案。请根据真实感受作答，就像你真的身处校园中一样。' },
+    { text: '你将进行 <strong>27 次互动</strong>（每位角色 3 次），每次选择你的回应方式。<br>互动结束后，请用文字或<strong>🎙️ 语音</strong>评价每位角色在三个公平维度上的表现。' },
+    { text: '⚠️ 没有标准答案。评价时可打字或录音（需允许麦克风），录音支持自动转写。' },
   ];
 
   if (state.introStep >= steps.length) {
@@ -561,13 +565,36 @@ function renderEval() {
   }
 
   const input = document.getElementById('eval-input');
+  const recKey = isOverall ? 'eval_overall' : ('eval_' + CHARACTERS[state.evalIndex].id);
+  const char = isOverall ? null : CHARACTERS[state.evalIndex];
+
+  if (VoiceRecorderKit.isSupported()) {
+    VoiceRecorderKit.stopActive();
+    VoiceRecorderKit.attach({
+      textarea: input,
+      key: recKey,
+      accentColor: '#5c9fd4',
+      meta: {
+        type: isOverall ? 'overall' : 'character',
+        charId: char ? char.id : 'overall',
+        charName: char ? char.name : '总体评价',
+        filename: 'fairness_roleplay_' + (isOverall ? 'overall' : char.id)
+      }
+    });
+  }
+
   document.getElementById('btn-eval-prev').onclick = () => {
-    saveCurrentEval(input.value);
+    VoiceRecorderKit.stopActive();
+    saveCurrentEval(input.value, recKey);
     if (state.evalIndex > 0) { state.evalIndex--; renderEval(); }
   };
   document.getElementById('btn-eval-next').onclick = () => {
-    if (!input.value.trim()) { alert('请填写评价内容后再继续。'); return; }
-    saveCurrentEval(input.value);
+    if (!VoiceRecorderKit.hasContent(input, recKey)) {
+      alert('请填写文字评价，或录制语音后再继续。');
+      return;
+    }
+    VoiceRecorderKit.stopActive();
+    saveCurrentEval(input.value, recKey);
     if (isOverall) {
       state.phase = 'result';
       render();
@@ -578,11 +605,22 @@ function renderEval() {
   };
 }
 
-function saveCurrentEval(text) {
+function saveCurrentEval(text, recKey) {
+  const rec = VoiceRecorderKit.getByKey(recKey);
+  const audioMeta = rec && rec.blob ? {
+    audio_recorded: true,
+    audio_duration_ms: rec.durationMs,
+    audio_filename: rec.filename
+  } : { audio_recorded: false };
+
   if (state.evalIndex >= CHARACTERS.length) {
     state.overallEval = text;
+    state.overallAudio = audioMeta;
   } else {
-    state.evaluations[CHARACTERS[state.evalIndex].id] = text;
+    const id = CHARACTERS[state.evalIndex].id;
+    state.evaluations[id] = text;
+    state.evalAudio = state.evalAudio || {};
+    state.evalAudio[id] = audioMeta;
   }
 }
 
@@ -612,10 +650,12 @@ function renderResult() {
     </div>
     <div class="btn-row" style="margin-top:16px;">
       <button class="btn btn-primary" id="btn-export">📥 下载数据 (JSON)</button>
+      <button class="btn btn-primary" id="btn-export-audio">🎙️ 下载录音文件</button>
       <button class="btn btn-secondary" id="btn-restart">🔄 重新开始</button>
     </div>
   `;
   document.getElementById('btn-export').onclick = exportData;
+  document.getElementById('btn-export-audio').onclick = () => VoiceRecorderKit.downloadAll('fairness_roleplay');
   document.getElementById('btn-restart').onclick = () => { initState(); render(); };
 }
 
@@ -686,9 +726,12 @@ function exportData() {
       distrib: c.distrib, proced: c.proced, interact: c.interact
     })),
     evaluations: CHARACTERS.map(c => ({
-      id: c.id, name: c.name, text: state.evaluations[c.id]
+      id: c.id, name: c.name, text: state.evaluations[c.id],
+      audio: (state.evalAudio && state.evalAudio[c.id]) || null
     })),
-    overallEvaluation: state.overallEval
+    overallEvaluation: state.overallEval,
+    overallAudio: state.overallAudio || null,
+    audio_recordings: VoiceRecorderKit.getManifest()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');

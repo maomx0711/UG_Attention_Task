@@ -9,6 +9,8 @@
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
     <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <link href="js/voice-recorder.css" rel="stylesheet" type="text/css" />
+    <script src="js/voice-recorder.js"></script>
 </head>
 <body></body>
 
@@ -446,12 +448,13 @@ const instructions = {
             <span class="role-badge role-dominator">支配者</span> 拥有一定决定权的学生干部（班长、部长、助教等），面对同学诉求或决策后果
         </p>
         <p><strong>2. 情境阅读</strong><br>共 9 个情境，涵盖三种公平维度与三种视角，场景均取材于大学生活。请尽量将自己<strong>代入场景</strong>，想象真实情况。</p>
-        <p><strong>3. 行为描述</strong><br>每个情境的场景描述与作答框在<strong>同一页面</strong>呈现。请阅读场景后，在下方空白框中用<strong>自己的语言</strong>详细描述：如果您身处该情境，<strong>您会怎么做？</strong>可以包括具体行动、说什么话、情绪反应和后续计划。</p>
+        <p><strong>3. 行为描述</strong><br>每个情境的场景描述与作答框在<strong>同一页面</strong>呈现。可<strong>打字</strong>或点击<strong>🎙️ 录音</strong>作答（需允许麦克风权限）；录音时可自动转写为文字。</p>
         <p><strong>4. 注意事项</strong></p>
         <ul>
             <li>没有标准答案，请根据真实想法作答</li>
-            <li>每个情境至少写 2-3 句话</li>
+            <li>每个情境需填写文字或录制语音（至少一种）</li>
             <li>请独立完成，不要与他人讨论</li>
+            <li>实验结束后可下载文字数据与录音文件</li>
         </ul>
         <p style="text-align:center; margin-top:28px; color:#5c4db1;"><strong>按任意键选择角色</strong></p>
     </div>`
@@ -543,16 +546,16 @@ function buildScenarioTrials(role) {
                 <div class="scenario-box">${sc.text}</div>
 
                 <div class="prompt-box">
-                    💭 请想象您正处于上述校园情境中，然后在<strong>下方空白框</strong>描述您认为自己会采取的行为。
+                    💭 请想象您正处于上述校园情境中，在<strong>下方打字或录音</strong>描述您认为自己会采取的行为。
                 </div>
             </div>`,
             questions: [{
                 prompt: `<p style="margin:0 0 8px;">请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
-                         <p style="font-size:13pt; color:#777; margin:0;">（可包括具体行动、说什么话、情绪和后续打算，至少2-3句话）</p>`,
+                         <p style="font-size:13pt; color:#777; margin:0;">（可打字、可录音，或边录边自动转写）</p>`,
                 rows: 6,
                 columns: 70,
                 name: 'behavior_response',
-                required: true
+                required: false
             }],
             button_label: '提交并继续',
             data: {
@@ -562,7 +565,28 @@ function buildScenarioTrials(role) {
                 scenario_title: sc.title,
                 trial_index: current
             },
+            on_load: function() {
+                const recKey = 'trial_' + current;
+                const ta = document.querySelector('#jspsych-survey-text-0');
+                if (ta && VoiceRecorderKit.isSupported()) {
+                    VoiceRecorderKit.attach({
+                        textarea: ta,
+                        key: recKey,
+                        accentColor: '#5c4db1',
+                        meta: {
+                            subject_id: subID,
+                            trial_index: current,
+                            scenario_title: sc.title,
+                            filename: 'fairness_college_' + subID + '_trial' + String(current).padStart(2, '0')
+                        }
+                    });
+                    VoiceRecorderKit.bindSubmitValidation('jspsych-survey-text-next', ta, recKey);
+                }
+            },
             on_finish: function(data) {
+                VoiceRecorderKit.stopActive();
+                const recKey = 'trial_' + current;
+                const rec = VoiceRecorderKit.getByKey(recKey);
                 const resp = data.response || JSON.parse(data.responses);
                 allResponses.push({
                     trial_index: current,
@@ -571,7 +595,10 @@ function buildScenarioTrials(role) {
                     perspective: sc.persp,
                     perspective_label: perspInfo.label,
                     scenario_title: sc.title,
-                    behavior: resp.behavior_response
+                    behavior: resp.behavior_response || '',
+                    audio_recorded: !!(rec && rec.blob),
+                    audio_duration_ms: rec ? rec.durationMs : 0,
+                    audio_filename: rec ? rec.filename : null
                 });
             }
         });
@@ -603,7 +630,8 @@ function displayResults() {
         role: selectedRole,
         role_label: roleLabel,
         timestamp: timestamp,
-        responses: allResponses
+        responses: allResponses,
+        audio_recordings: VoiceRecorderKit.getManifest()
     };
 
     document.body.innerHTML = `
@@ -628,6 +656,7 @@ function displayResults() {
         <div style="text-align:center; margin-top:28px;">
             <button class="jspsych-btn" onclick="downloadJSON()">下载 JSON 数据</button>
             <button class="jspsych-btn" onclick="downloadCSV()">下载 CSV 数据</button>
+            <button class="jspsych-btn" onclick="downloadAudio()">下载录音文件</button>
         </div>
     </div>`;
 
@@ -648,6 +677,10 @@ function downloadJSON() {
     a.download = `fairness_college_${subID}_${selectedRole}.json`;
     a.click();
     URL.revokeObjectURL(url);
+}
+
+function downloadAudio() {
+    VoiceRecorderKit.downloadAll('fairness_college_' + subID);
 }
 
 function downloadCSV() {
