@@ -56,3 +56,25 @@
     from { height: 6px; }
     to { height: 18px; }
 }
+.vr-player-wrap {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.vr-player-label {
+    font-size: 0.78rem;
+    color: #aabbcc;
+    margin-bottom: 8px;
+}
+.vr-audio {
+    width: 100%;
+    height: 36px;
+}
+.vr-confirm-tip {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #81c784;
+    text-align: center;
+}

@@ -438,8 +438,8 @@ function renderIntro() {
     { text: '你需要通过<strong>互动</strong>来感知每个人在三个公平维度上的位置：<br>'
       + '<span style="color:#64b5f6">分配公平</span> · <span style="color:#81c784">程序公平</span> · <span style="color:#f48fb1">互动公平</span><br>'
       + '你看不到他们的"公平坐标"，只能凭直觉感受。' },
-    { text: '你将进行 <strong>27 次互动</strong>（每位角色 3 次），每次选择你的回应方式。<br>互动结束后，请用文字或<strong>🎙️ 语音</strong>评价每位角色在三个公平维度上的表现。' },
-    { text: '⚠️ 没有标准答案。评价时可打字或录音（需允许麦克风），录音支持自动转写。' },
+    { text: '你将进行 <strong>27 次互动</strong>（每位角色 3 次），每次选择你的回应方式。<br>互动结束后，请<strong>仅通过语音录制</strong>评价每位角色在三个公平维度上的表现。' },
+    { text: '⚠️ 没有标准答案。每段评价需录音作答，录完后请<strong>播放确认</strong>再提交（需允许麦克风）。' },
   ];
 
   if (state.introStep >= steps.length) {
@@ -537,7 +537,7 @@ function renderEval() {
         · 在<strong>互动公平</strong>（人际对待方式）方面，你的观察是什么？<br>
         · 谁给你留下了最"公平"或最"不公平"的印象？为什么？
       </div>
-      <textarea class="eval-textarea" id="eval-input" placeholder="请在此输入您的总体评价（至少3-5句话）…">${state.overallEval}</textarea>
+      <div id="eval-voice-container"></div>
     `;
     document.getElementById('btn-eval-prev').style.display = 'inline-block';
     document.getElementById('btn-eval-next').textContent = '✅ 提交完成';
@@ -557,44 +557,45 @@ function renderEval() {
         · <span style="color:#81c784">程序公平</span>：决策过程是否透明、有规则？<br>
         · <span style="color:#f48fb1">互动公平</span>：对待你的方式是否尊重、诚恳？
       </div>
-      <textarea class="eval-textarea" id="eval-input" placeholder="请描述您对该角色的公平评价…">${state.evaluations[char.id] || ''}</textarea>
+      <div id="eval-voice-container"></div>
     `;
     document.getElementById('btn-eval-prev').style.display = state.evalIndex > 0 ? 'inline-block' : 'none';
     document.getElementById('btn-eval-next').textContent =
       state.evalIndex < CHARACTERS.length - 1 ? '下一位 →' : '总体评价 →';
   }
 
-  const input = document.getElementById('eval-input');
+  const container = document.getElementById('eval-voice-container');
   const recKey = isOverall ? 'eval_overall' : ('eval_' + CHARACTERS[state.evalIndex].id);
-  const char = isOverall ? null : CHARACTERS[state.evalIndex];
+  const charForRec = isOverall ? null : CHARACTERS[state.evalIndex];
 
-  if (VoiceRecorderKit.isSupported()) {
+  if (VoiceRecorderKit.isSupported() && container) {
     VoiceRecorderKit.stopActive();
     VoiceRecorderKit.attach({
-      textarea: input,
+      container: container,
+      mode: 'audioOnly',
       key: recKey,
       accentColor: '#5c9fd4',
       meta: {
         type: isOverall ? 'overall' : 'character',
-        charId: char ? char.id : 'overall',
-        charName: char ? char.name : '总体评价',
-        filename: 'fairness_roleplay_' + (isOverall ? 'overall' : char.id)
+        charId: charForRec ? charForRec.id : 'overall',
+        charName: charForRec ? charForRec.name : '总体评价',
+        filename: 'fairness_roleplay_' + (isOverall ? 'overall' : charForRec.id)
       }
     });
   }
 
   document.getElementById('btn-eval-prev').onclick = () => {
     VoiceRecorderKit.stopActive();
-    saveCurrentEval(input.value, recKey);
+    saveCurrentEval(recKey);
     if (state.evalIndex > 0) { state.evalIndex--; renderEval(); }
   };
   document.getElementById('btn-eval-next').onclick = () => {
-    if (!VoiceRecorderKit.hasContent(input, recKey)) {
-      alert('请填写文字评价，或录制语音后再继续。');
+    if (!VoiceRecorderKit.hasRecording(recKey)) {
+      alert('请先录制语音评价，并播放确认后再继续。');
       return;
     }
     VoiceRecorderKit.stopActive();
-    saveCurrentEval(input.value, recKey);
+    saveCurrentEval(recKey);
     if (isOverall) {
       state.phase = 'result';
       render();
@@ -605,7 +606,7 @@ function renderEval() {
   };
 }
 
-function saveCurrentEval(text, recKey) {
+function saveCurrentEval(recKey) {
   const rec = VoiceRecorderKit.getByKey(recKey);
   const audioMeta = rec && rec.blob ? {
     audio_recorded: true,
@@ -614,11 +615,11 @@ function saveCurrentEval(text, recKey) {
   } : { audio_recorded: false };
 
   if (state.evalIndex >= CHARACTERS.length) {
-    state.overallEval = text;
+    state.overallEval = '[语音作答]';
     state.overallAudio = audioMeta;
   } else {
     const id = CHARACTERS[state.evalIndex].id;
-    state.evaluations[id] = text;
+    state.evaluations[id] = '[语音作答]';
     state.evalAudio = state.evalAudio || {};
     state.evalAudio[id] = audioMeta;
   }
@@ -726,10 +727,12 @@ function exportData() {
       distrib: c.distrib, proced: c.proced, interact: c.interact
     })),
     evaluations: CHARACTERS.map(c => ({
-      id: c.id, name: c.name, text: state.evaluations[c.id],
+      id: c.id, name: c.name, text: state.evaluations[c.id] || '[语音作答]',
+      mode: 'audio_only',
       audio: (state.evalAudio && state.evalAudio[c.id]) || null
     })),
-    overallEvaluation: state.overallEval,
+    overallEvaluation: state.overallEval || '[语音作答]',
+    overallMode: 'audio_only',
     overallAudio: state.overallAudio || null,
     audio_recordings: VoiceRecorderKit.getManifest()
   };

@@ -1,23 +1,19 @@
 /**
- * 实验语音录制工具 — MediaRecorder + 可选 Web Speech API 转写
- * 用法: VoiceRecorderKit.attach({ textarea, key, meta })
+ * 实验语音录制工具 — 仅录音模式，支持播放确认
+ * 用法: VoiceRecorderKit.attach({ container, key, meta, mode: 'audioOnly' })
  */
 window.VoiceRecorderKit = (function() {
-    const store = {};   // key -> { blob, durationMs, mimeType, meta, transcript }
+    const store = {};
     let mediaRecorder = null;
     let mediaStream = null;
     let activeKey = null;
     let chunks = [];
     let startTime = 0;
-    let recognition = null;
     let activeUI = null;
+    let activeAudioEl = null;
 
     function isSupported() {
         return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-    }
-
-    function speechSupported() {
-        return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     }
 
     function formatDuration(ms) {
@@ -29,9 +25,6 @@ window.VoiceRecorderKit = (function() {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             try { mediaRecorder.stop(); } catch (e) { /* ignore */ }
         }
-        if (recognition) {
-            try { recognition.stop(); } catch (e) { /* ignore */ }
-        }
         if (mediaStream) {
             mediaStream.getTracks().forEach(t => t.stop());
             mediaStream = null;
@@ -39,36 +32,13 @@ window.VoiceRecorderKit = (function() {
         if (activeUI) {
             activeUI.classList.remove('vr-recording');
             const btn = activeUI.querySelector('.vr-btn-record');
-            if (btn) { btn.textContent = '🎙️ 开始录音'; btn.classList.remove('vr-recording'); }
+            if (btn) {
+                btn.textContent = '🎙️ 开始录音';
+                btn.classList.remove('vr-recording');
+            }
         }
         activeKey = null;
         activeUI = null;
-    }
-
-    function startSpeechToText(textarea, key) {
-        if (!speechSupported()) return;
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SR();
-        recognition.lang = 'zh-CN';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        let baseText = textarea.value;
-        recognition.onresult = function(event) {
-            let interim = '';
-            let final = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const t = event.results[i][0].transcript;
-                if (event.results[i].isFinal) final += t;
-                else interim += t;
-            }
-            if (final) {
-                baseText += final;
-                if (store[key]) store[key].transcript = baseText;
-            }
-            textarea.value = baseText + interim;
-        };
-        recognition.onerror = function() { /* 转写失败不影响录音 */ };
-        try { recognition.start(); } catch (e) { /* ignore */ }
     }
 
     function attach(options) {
@@ -77,31 +47,49 @@ window.VoiceRecorderKit = (function() {
             return null;
         }
 
-        const textarea = options.textarea;
+        const mode = options.mode || 'audioOnly';
         const key = options.key;
         const meta = options.meta || {};
         const accent = options.accentColor || '#5c9fd4';
+        const container = options.container || (options.textarea && options.textarea.parentNode);
+
+        if (!container) return null;
+
+        if (options.textarea) {
+            options.textarea.style.display = 'none';
+            const label = options.textarea.closest('p') || options.textarea.previousElementSibling;
+            if (label && label.tagName === 'P') label.style.display = 'none';
+        }
 
         stopActive();
 
+        const existing = container.querySelector('.vr-panel[data-key="' + key + '"]');
+        if (existing) existing.remove();
+
         const panel = document.createElement('div');
         panel.className = 'vr-panel';
+        panel.dataset.key = key;
         panel.innerHTML = `
             <div class="vr-header">
-                <span class="vr-title">🎤 语音作答（可选）</span>
+                <span class="vr-title">🎤 语音作答</span>
                 <span class="vr-status" data-status>未录音</span>
             </div>
-            <div class="vr-hint">可打字、可录音，或边录边自动转写为文字。需允许浏览器使用麦克风。</div>
+            <div class="vr-hint">请点击「开始录音」作答，录完后请<strong>播放确认</strong>内容无误，再提交。需允许浏览器使用麦克风。</div>
             <div class="vr-controls">
                 <button type="button" class="vr-btn vr-btn-record">🎙️ 开始录音</button>
-                <button type="button" class="vr-btn vr-btn-stop" disabled>⏹ 停止</button>
-                <button type="button" class="vr-btn vr-btn-play" disabled>▶ 播放</button>
-                <button type="button" class="vr-btn vr-btn-clear" disabled>🗑 删除录音</button>
+                <button type="button" class="vr-btn vr-btn-stop" disabled>⏹ 停止录音</button>
+                <button type="button" class="vr-btn vr-btn-play" disabled>▶ 播放确认</button>
+                <button type="button" class="vr-btn vr-btn-clear" disabled>🗑 重新录制</button>
             </div>
             <div class="vr-wave" style="display:none;"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="vr-player-wrap" style="display:none;">
+                <div class="vr-player-label">🔊 录音预览（请播放确认后再提交）</div>
+                <audio class="vr-audio" controls preload="auto"></audio>
+            </div>
+            <div class="vr-confirm-tip" style="display:none;">✅ 录音已保存。请点击播放确认，满意后提交本页。</div>
         `;
 
-        textarea.parentNode.insertBefore(panel, textarea.nextSibling);
+        container.appendChild(panel);
 
         const statusEl = panel.querySelector('[data-status]');
         const btnRecord = panel.querySelector('.vr-btn-record');
@@ -109,25 +97,43 @@ window.VoiceRecorderKit = (function() {
         const btnPlay = panel.querySelector('.vr-btn-play');
         const btnClear = panel.querySelector('.vr-btn-clear');
         const wave = panel.querySelector('.vr-wave');
+        const playerWrap = panel.querySelector('.vr-player-wrap');
+        const audioEl = panel.querySelector('.vr-audio');
+        const confirmTip = panel.querySelector('.vr-confirm-tip');
 
         panel.style.setProperty('--vr-accent', accent);
+
+        function setAudioPreview(blob) {
+            if (activeAudioEl && activeAudioEl.src) {
+                URL.revokeObjectURL(activeAudioEl);
+            }
+            const url = URL.createObjectURL(blob);
+            audioEl.src = url;
+            activeAudioEl = audioEl;
+            playerWrap.style.display = 'block';
+            confirmTip.style.display = 'block';
+        }
 
         function updateStatus() {
             const rec = store[key];
             if (rec && rec.blob) {
-                statusEl.textContent = '已录音 ' + formatDuration(rec.durationMs);
+                statusEl.textContent = '已录音 ' + formatDuration(rec.durationMs) + ' · 请播放确认';
                 statusEl.className = 'vr-status vr-done';
                 btnPlay.disabled = false;
                 btnClear.disabled = false;
+                setAudioPreview(rec.blob);
             } else {
                 statusEl.textContent = '未录音';
                 statusEl.className = 'vr-status';
                 btnPlay.disabled = true;
                 btnClear.disabled = true;
+                playerWrap.style.display = 'none';
+                confirmTip.style.display = 'none';
+                audioEl.removeAttribute('src');
             }
         }
 
-        if (store[key]) updateStatus();
+        if (store[key] && store[key].blob) updateStatus();
 
         btnRecord.onclick = async function() {
             if (mediaRecorder && mediaRecorder.state === 'recording') return;
@@ -147,7 +153,6 @@ window.VoiceRecorderKit = (function() {
                     const blob = new Blob(chunks, { type: mimeType });
                     store[key] = {
                         blob, durationMs, mimeType, meta,
-                        transcript: textarea.value || '',
                         filename: (meta.filename || key) + '.webm'
                     };
                     if (mediaStream) {
@@ -170,55 +175,53 @@ window.VoiceRecorderKit = (function() {
                 btnRecord.textContent = '🔴 录音中…';
                 statusEl.textContent = '录音中…';
                 statusEl.className = 'vr-status vr-live';
-                startSpeechToText(textarea, key);
+                playerWrap.style.display = 'none';
+                confirmTip.style.display = 'none';
             } catch (err) {
                 alert('无法访问麦克风：' + (err.message || '请检查浏览器权限设置'));
             }
         };
 
         btnStop.onclick = function() {
-            if (recognition) { try { recognition.stop(); } catch (e) {} recognition = null; }
             if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         };
 
         btnPlay.onclick = function() {
             const rec = store[key];
             if (!rec || !rec.blob) return;
-            const audio = new Audio(URL.createObjectURL(rec.blob));
-            audio.play();
+            if (!audioEl.src) setAudioPreview(rec.blob);
+            audioEl.play();
         };
 
         btnClear.onclick = function() {
-            if (confirm('确定删除本条录音吗？')) {
+            if (confirm('确定删除本条录音并重新录制吗？')) {
                 delete store[key];
                 btnRecord.textContent = '🎙️ 开始录音';
+                if (audioEl.src) {
+                    URL.revokeObjectURL(audioEl.src);
+                    audioEl.removeAttribute('src');
+                }
                 updateStatus();
             }
         };
 
-        return {
-            key,
-            hasRecording: () => !!(store[key] && store[key].blob),
-            getRecording: () => store[key] || null,
-            destroy: () => { panel.remove(); }
-        };
+        return { key, hasRecording: () => hasRecording(key), getRecording: () => store[key] || null };
     }
 
     function getByKey(key) { return store[key] || null; }
     function getAll() { return Object.entries(store).map(([k, v]) => ({ key: k, ...v })); }
 
-    function hasContent(textarea, key) {
-        const text = (textarea && textarea.value || '').trim();
+    function hasRecording(key) {
         const rec = store[key];
-        return text.length > 0 || !!(rec && rec.blob);
+        return !!(rec && rec.blob);
     }
 
-    function bindSubmitValidation(formOrBtn, textarea, key, message) {
-        const msg = message || '请填写文字回答，或录制语音后再提交。';
+    function bindSubmitValidation(formOrBtn, key, message) {
+        const msg = message || '请先录制语音，并播放确认后再提交。';
         const btn = typeof formOrBtn === 'string' ? document.getElementById(formOrBtn) : formOrBtn;
         if (!btn) return;
         btn.addEventListener('click', function(e) {
-            if (!hasContent(textarea, key)) {
+            if (!hasRecording(key)) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 alert(msg);
@@ -245,14 +248,13 @@ window.VoiceRecorderKit = (function() {
             filename: rec.filename,
             durationMs: rec.durationMs,
             mimeType: rec.mimeType,
-            transcript: rec.transcript,
             meta: rec.meta
         }));
     }
 
     return {
-        isSupported, speechSupported, attach, stopActive,
-        getByKey, getAll, hasContent, bindSubmitValidation,
+        isSupported, attach, stopActive,
+        getByKey, getAll, hasRecording, bindSubmitValidation,
         downloadAll, getManifest
     };
 })();

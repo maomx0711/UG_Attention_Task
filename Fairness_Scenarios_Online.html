@@ -448,13 +448,13 @@ const instructions = {
             <span class="role-badge role-dominator">支配者</span> 拥有决策权和资源分配权的管理者
         </p>
         <p><strong>2. 情境阅读</strong><br>共 9 个情境，涵盖三种公平维度与三种视角。请尽量将自己<strong>代入场景</strong>，想象真实情况。</p>
-        <p><strong>3. 行为描述</strong><br>每个情境的场景描述与作答框在<strong>同一页面</strong>呈现。可<strong>打字</strong>或点击<strong>🎙️ 录音</strong>作答（需允许麦克风权限）；录音时可自动转写为文字。</p>
+        <p><strong>3. 语音作答</strong><br>每个情境需<strong>仅通过语音录制</strong>描述您的行为（需允许麦克风）。录完后请<strong>播放确认</strong>内容无误，再提交。</p>
         <p><strong>4. 注意事项</strong></p>
         <ul>
             <li>没有标准答案，请根据真实想法作答</li>
-            <li>每个情境需填写文字或录制语音（至少一种）</li>
+            <li>每题必须完成录音并播放确认后才能提交</li>
             <li>请独立完成，不要与他人讨论</li>
-            <li>实验结束后可下载文字数据与录音文件</li>
+            <li>实验结束后可下载录音文件与数据清单</li>
         </ul>
         <p style="text-align:center; margin-top:28px; color:#2d6a9f;"><strong>按任意键选择角色</strong></p>
     </div>`
@@ -546,13 +546,13 @@ function buildScenarioTrials(role) {
                 <div class="scenario-box">${sc.text}</div>
 
                 <div class="prompt-box">
-                    💭 请想象您正处于上述情境中，在<strong>下方打字或录音</strong>描述您认为自己会采取的行为。
+                    💭 请想象您正处于上述情境中，在<strong>下方语音录制</strong>您认为自己会采取的行为，录完后播放确认。
                 </div>
             </div>`,
             questions: [{
-                prompt: `<p style="margin:0 0 8px;">请详细描述：<strong>如果您身处该情境，您会采取什么行为？</strong></p>
-                         <p style="font-size:13pt; color:#777; margin:0;">（可打字、可录音，或边录边自动转写）</p>`,
-                rows: 6,
+                prompt: `<p style="margin:0 0 8px;">请<strong>语音回答</strong>：如果您身处该情境，您会采取什么行为？</p>
+                         <p style="font-size:13pt; color:#777; margin:0;">（仅录音作答，录完后请点击播放确认）</p>`,
+                rows: 1,
                 columns: 70,
                 name: 'behavior_response',
                 required: false
@@ -567,10 +567,13 @@ function buildScenarioTrials(role) {
             },
             on_load: function() {
                 const recKey = 'trial_' + current;
+                const container = document.querySelector('.jspsych-survey-text');
                 const ta = document.querySelector('#jspsych-survey-text-0');
-                if (ta && VoiceRecorderKit.isSupported()) {
+                if (container && VoiceRecorderKit.isSupported()) {
                     VoiceRecorderKit.attach({
+                        container: container,
                         textarea: ta,
+                        mode: 'audioOnly',
                         key: recKey,
                         accentColor: '#2d6a9f',
                         meta: {
@@ -580,7 +583,10 @@ function buildScenarioTrials(role) {
                             filename: 'fairness_workplace_' + subID + '_trial' + String(current).padStart(2, '0')
                         }
                     });
-                    VoiceRecorderKit.bindSubmitValidation('jspsych-survey-text-next', ta, recKey);
+                    VoiceRecorderKit.bindSubmitValidation('jspsych-survey-text-next', recKey);
+                    document.getElementById('jspsych-survey-text-next').addEventListener('click', function() {
+                        if (ta && VoiceRecorderKit.hasRecording(recKey)) ta.value = '[语音作答]';
+                    }, true);
                 }
             },
             on_finish: function(data) {
@@ -595,7 +601,8 @@ function buildScenarioTrials(role) {
                     perspective: sc.persp,
                     perspective_label: perspInfo.label,
                     scenario_title: sc.title,
-                    behavior: resp.behavior_response || '',
+                    behavior: '[语音作答]',
+                    behavior_mode: 'audio_only',
                     audio_recorded: !!(rec && rec.blob),
                     audio_duration_ms: rec ? rec.durationMs : 0,
                     audio_filename: rec ? rec.filename : null
